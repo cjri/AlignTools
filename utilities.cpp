@@ -8,20 +8,30 @@ void GetParameters (run_params& p, int argc, const char **argv) {
 	string p_switch;
 	int x=1;
 	p.ali_file="Align.fa";
-	p.seed=(int) time(NULL);
+    p.get_positions=1;
+    p.get_frequencies=1;
+    p.get_correlations=1;
 	while (x < argc && (argv[x][0]=='-')) {
 		p_switch=argv[x];
-		cout << p_switch << "\n";
 		if (p_switch.compare("--ali_file")==0) {
 			x++;
 			p.ali_file=argv[x];
-		} else {
+		} else if (p_switch.compare("--get_frequencies")==0) {
+            x++;
+            p.get_frequencies=atoi(argv[x]);
+        } else if (p_switch.compare("--get_correlations")==0) {
+            x++;
+            p.get_correlations=atoi(argv[x]);
+        } else {
 			cout << "Incorrect usage\n ";
 			exit(1);
 		}
 		p_switch.clear();
 		x++;
 	}
+    if (p.get_frequencies==0) {
+        p.get_correlations=0;
+    }
 }
 
 void ReadVariants (run_params& p, vector<site>& ali_stats) {
@@ -105,7 +115,10 @@ void GetConsensus (vector<site>& ali_stats, vector<string>& consensus) {
     cons_file.open("Alignment_consensus.fa");
     cons_file << ">Alignment_consensus\n";
     for (int i=0;i<ali_stats.size();i++) {
-        string cons="A";
+        string cons="N";
+        if (ali_stats[i].A>0) {
+            cons="A";
+        }
         if (ali_stats[i].C>ali_stats[i].A) {
             cons="C";
         }

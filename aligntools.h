@@ -7,27 +7,15 @@
 #include <string>
 #include <algorithm>
 #include <map>
-
+#include <cmath>
 
 using namespace std;
 
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_multifit_nlin.h>
-#include <gsl/gsl_sf_hyperg.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_histogram.h>
-#include <gsl/gsl_statistics_double.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_multimin.h>
 
 struct run_params {
-    int seed;
+    int get_positions;
+    int get_frequencies;
+    int get_correlations;
     string ali_file;
 };
 

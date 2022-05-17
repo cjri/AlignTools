@@ -22,7 +22,8 @@ int main(int argc, const char **argv){
     if (p.dismat==1) {
         //Create distance matrix between sequences
         vector<string> seqs;
-        ReadFastaAli(p,seqs);
+        vector<string> names;
+        ReadFastaAli(p,seqs,names);
         CheckBaseCase(seqs);
         string all_consensus;
         FindConsensus(all_consensus,seqs);
@@ -38,6 +39,12 @@ int main(int argc, const char **argv){
                 cout << seqdists[i][j] << " ";
             }
             cout << "\n";
+        }
+        
+        if (p.dist_cut>0) {
+            cout << "Here\n";
+            vector< vector<int> > subsets;
+            GetSubsetsIJ (p,names,seqdists,subsets);
         }
     }
     

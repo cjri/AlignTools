@@ -25,8 +25,12 @@ void GetParameters (run_params& p, int argc, const char **argv) {
         } else if (p_switch.compare("--distances")==0) {
             x++;
             p.dismat=atoi(argv[x]);
+        } else if (p_switch.compare("--cutoff")==0) {
+            x++;
+            p.dist_cut=atoi(argv[x]);
         } else {
 			cout << "Incorrect usage\n ";
+            cout << p_switch << "\n";
 			exit(1);
 		}
 		p_switch.clear();
@@ -37,7 +41,7 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     }
 }
 
-void ReadFastaAli (run_params p, vector<string>& seqs) {
+void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names) {
     ifstream ali_file;
     ali_file.open(p.ali_file.c_str());
     string seq;
@@ -45,6 +49,8 @@ void ReadFastaAli (run_params p, vector<string>& seqs) {
     for (int i=0;i<1000000;i++) {
         if (!(ali_file >> str)) break;
         if (str.at(0)=='>') {
+            str.erase(0,1);
+            names.push_back(str);
             if (seq.size()>0) {
                 seqs.push_back(seq);
                 seq.clear();
@@ -184,6 +190,67 @@ void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, v
         }
     }
 }
+
+
+void GetSubsetsIJ (run_params p, const vector<string>& names, const vector< vector<int> >& seqdists, vector< vector<int> >& subsets) {
+    cout << "Consistent groups\n";
+    FindDistanceSubsetsIJ(p.dist_cut,seqdists,subsets);
+    cout << "Subsets\n";
+    for (int i=0;i<subsets.size();i++) {
+        for (int j=0;j<subsets[i].size();j++) {
+            cout << names[subsets[i][j]] << " ";
+        }
+        cout << "\n";
+    }
+}
+
+
+void FindDistanceSubsetsIJ(int cut, const vector< vector<int> >& seqdists, vector< vector<int> >& subsets) {
+    vector <int> range;
+    for (int i=0;i<seqdists.size();i++) {
+        range.push_back(i);
+    }
+    while (range.size()>0) {
+        vector<int> sset;
+        sset.clear();
+        sset.push_back(range[0]);
+        int add=1;
+        while (add==1) {
+            int ss=sset.size();
+            add=0;
+            for (int i=0;i<ss;i++) {
+                for (int j=0;j<seqdists.size();j++) {
+                    if (seqdists[sset[i]][j]<=cut) {
+                        //cout << "Add " << sset[i] << " " << j << "\n";
+                        sset.push_back(j);
+                    }
+                    if (seqdists[j][sset[i]]<=cut) {
+                        //cout << "Add " << sset[i] << " " << j << "\n";
+                        sset.push_back(j);
+                    }
+                }
+            }
+            sort(sset.begin(),sset.end());
+            sset.erase(unique(sset.begin(),sset.end()),sset.end());
+            //cout << sset.size() << "\n";
+            if (sset.size()>ss) {
+                add=1;
+            }
+        }
+        //Add sset to subsets
+        //cout << "Push back to subsets\n";
+        subsets.push_back(sset);
+        for (int i=0;i<sset.size();i++) {
+            for (int j=0;j<range.size();j++) {
+                if (range[j]==sset[i]) {
+                    range.erase(range.begin()+j);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 
 
 

@@ -18,6 +18,7 @@ struct run_params {
     int get_correlations;
     string ali_file;
     int dismat;
+    int dist_cut;
 };
 
 struct sparseseq {

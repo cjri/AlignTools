@@ -17,6 +17,12 @@ struct run_params {
     int get_frequencies;
     int get_correlations;
     string ali_file;
+    int dismat;
+};
+
+struct sparseseq {
+    vector<int> locus;
+    vector<char> allele;
 };
 
 struct site {

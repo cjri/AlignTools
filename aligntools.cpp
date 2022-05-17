@@ -19,6 +19,28 @@ int main(int argc, const char **argv){
 	run_params p;
 	GetParameters(p,argc,argv);
 
+    if (p.dismat==1) {
+        //Create distance matrix between sequences
+        vector<string> seqs;
+        ReadFastaAli(p,seqs);
+        CheckBaseCase(seqs);
+        string all_consensus;
+        FindConsensus(all_consensus,seqs);
+        vector<sparseseq> variants;
+        FindSVariants (variants,all_consensus,seqs);
+        //Thought: Do we want to check for ambiguous nucleotides.  Currently no.
+        
+        vector< vector<int> > seqdists;
+        FindPairwiseDistances (variants,seqs,seqdists);
+        for (int i=0;i<seqdists.size();i++) {
+            
+            for (int j=0;j<seqdists[i].size();j++) {
+                cout << seqdists[i][j] << " ";
+            }
+            cout << "\n";
+        }
+    }
+    
 	//Open alignment
     vector<site> ali_stats;
     ReadVariants (p,ali_stats);

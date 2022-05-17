@@ -22,6 +22,9 @@ void GetParameters (run_params& p, int argc, const char **argv) {
         } else if (p_switch.compare("--get_correlations")==0) {
             x++;
             p.get_correlations=atoi(argv[x]);
+        } else if (p_switch.compare("--distances")==0) {
+            x++;
+            p.dismat=atoi(argv[x]);
         } else {
 			cout << "Incorrect usage\n ";
 			exit(1);
@@ -34,10 +37,160 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     }
 }
 
+void ReadFastaAli (run_params p, vector<string>& seqs) {
+    ifstream ali_file;
+    ali_file.open(p.ali_file.c_str());
+    string seq;
+    string str;
+    for (int i=0;i<1000000;i++) {
+        if (!(ali_file >> str)) break;
+        if (str.at(0)=='>') {
+            if (seq.size()>0) {
+                seqs.push_back(seq);
+                seq.clear();
+            }
+        } else {
+            seq=seq+str;
+        }
+    }
+    if (seq.size()>0) {
+        seqs.push_back(seq);
+    }
+}
+
+void CheckBaseCase (vector<string>& seqs) {
+    cout << "Check base case\n";
+    for (int i=0;i<seqs.size();i++) {
+        for (int j=0;j<seqs[i].size();j++) {
+            if (seqs[i].compare(j,1,"a")==0) {
+                seqs[i][j]='A';
+            } else if (seqs[i].compare(j,1,"c")==0) {
+                seqs[i][j]='C';
+            } else if (seqs[i].compare(j,1,"g")==0) {
+                seqs[i][j]='G';
+            } else if (seqs[i].compare(j,1,"t")==0) {
+                seqs[i][j]='T';
+            } else if (seqs[i].compare(j,1,"n")==0) {
+                seqs[i][j]='N';
+            } else if (seqs[i].compare(j,1,"-")==0) {
+                seqs[i][j]='N';
+            }
+        }
+    }
+}
+
+void FindConsensus (string& consensus, vector<string>& seqs) {
+    consensus=seqs[0];
+    if (seqs.size()>1) {
+        int nA=0;
+        int nC=0;
+        int nG=0;
+        int nT=0;
+        for (int pos=0;pos<seqs[0].size();pos++) {
+            nA=0;
+            nC=0;
+            nG=0;
+            nT=0;
+            for (int seq=0;seq<seqs.size();seq++) {
+                if (seqs[seq][pos]=='A') {
+                    nA++;
+                }
+                if (seqs[seq][pos]=='C') {
+                    nC++;
+                }
+                if (seqs[seq][pos]=='G') {
+                    nG++;
+                }
+                if (seqs[seq][pos]=='T') {
+                    nT++;
+                }
+            }
+            int max=nA;
+            consensus[pos]='A';
+            if (nC>max) {
+                max=nC;
+                consensus[pos]='C';
+            }
+            if (nG>max) {
+                max=nG;
+                consensus[pos]='G';
+            }
+            if (nT>max) {
+                consensus[pos]='T';
+                max=nT;
+            }
+            if (max==0) {
+                consensus[pos]='-';
+            }
+        }
+    }
+}
+
+void FindSVariants (vector<sparseseq>& variants, string& consensus, vector<string>& seqs) {
+    cout << "Find variants\n";
+    for (int i=0;i<seqs.size();i++) {
+        sparseseq s;
+        for (int pos=0;pos<seqs[i].size();pos++) {
+            if (seqs[i].compare(pos,1,consensus,pos,1)!=0) {
+                if (seqs[i].compare(pos,1,"A")==0||seqs[i].compare(pos,1,"C")==0||seqs[i].compare(pos,1,"G")==0||seqs[i].compare(pos,1,"T")==0) {
+                    //cout << "Found variant " << pdat[i].code_match << " " << pos << " " << consensus[pos] << " " << seqs[i][pos] << "\n";
+                    s.locus.push_back(pos);
+                    s.allele.push_back(seqs[i][pos]);
+                }
+            }
+        }
+        variants.push_back(s);
+    }
+}
+
+void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, vector< vector<int> >& seqdists) {
+    vector<int> zeros(seqs.size(),0);
+    for (int i=0;i<seqs.size();i++) {
+        seqdists.push_back(zeros);
+    }
+    for (int i=0;i<seqs.size();i++) {
+        for (int j=i+1;j<seqs.size();j++) {
+            int dist=0;
+            //Find unique difference positions;
+            vector<int> uniq;
+            for (int k=0;k<variants[i].locus.size();k++) {
+                uniq.push_back(variants[i].locus[k]);
+            }
+            for (int k=0;k<variants[j].locus.size();k++) {
+                uniq.push_back(variants[j].locus[k]);
+            }
+            sort(uniq.begin(),uniq.end());
+            uniq.erase(unique(uniq.begin(),uniq.end()),uniq.end());
+            for (int k=0;k<uniq.size();k++) {
+                if (seqs[i][uniq[k]]=='A'||seqs[i][uniq[k]]=='C'||seqs[i][uniq[k]]=='G'||seqs[i][uniq[k]]=='T') {
+                    if (seqs[j][uniq[k]]=='A'||seqs[j][uniq[k]]=='C'||seqs[j][uniq[k]]=='G'||seqs[j][uniq[k]]=='T') {
+                        if (seqs[i][uniq[k]]!=seqs[j][uniq[k]]) {
+                            dist++;
+                        }
+                    }
+                }
+            }
+            seqdists[i][j]=dist;
+            seqdists[j][i]=dist;
+        }
+    }
+    for (int i=0;i<seqs.size();i++) {
+        if (seqs[i].size()==0) {
+            for (int j=0;j<seqs.size();j++){
+                seqdists[i][j]=-1;
+                seqdists[j][i]=-1;
+            }
+            seqdists[i][i]=0;
+        }
+    }
+}
+
+
+
 void ReadVariants (run_params& p, vector<site>& ali_stats) {
     ifstream ali_file;
     ali_file.open(p.ali_file);
-    for (int i=0;i<100000;i++) {
+    for (int i=0;i<1000000;i++) {
         string name;
         if (!(ali_file >> name)) break;
         if (name.compare(0,1,">")!=0) {

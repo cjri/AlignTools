@@ -193,7 +193,6 @@ void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, v
 
 
 void GetSubsetsIJ (run_params p, const vector<string>& names, const vector< vector<int> >& seqdists, vector< vector<int> >& subsets) {
-    cout << "Consistent groups\n";
     FindDistanceSubsetsIJ(p.dist_cut,seqdists,subsets);
     cout << "Subsets\n";
     for (int i=0;i<subsets.size();i++) {

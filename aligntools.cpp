@@ -46,6 +46,7 @@ int main(int argc, const char **argv){
             vector< vector<int> > subsets;
             GetSubsetsIJ (p,names,seqdists,subsets);
         }
+        return 0;
     }
     
 	//Open alignment

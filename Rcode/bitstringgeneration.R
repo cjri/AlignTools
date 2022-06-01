@@ -60,7 +60,7 @@ run <- function(n) {
     
     ##write out
     write.table(bitstrings[[1]], file = paste0(getwd(), "/", "bitstrings", filename[j], ".txt"), row.names = F, col.names = F, sep = "\t", eol = "\n")
-    write.table(bitstrings[[1]], file = paste0(getwd(), "/", "positions", filename[j], ".txt"), row.names = F, col.names = F, sep = "\t", eol = "\n")
+    write.table(bitstrings[[2]], file = paste0(getwd(), "/", "positions", filename[j], ".txt"), row.names = F, col.names = F, sep = "\t", eol = "\n")
   }
 }
 

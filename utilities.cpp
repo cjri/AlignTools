@@ -1,16 +1,29 @@
 #include "aligntools.h"
+#include "io.h"
 #include "utilities.h"
 #include <iostream>
 #include <string>
 #include <cstring>
 
+
 void GetParameters (run_params& p, int argc, const char **argv) {
 	string p_switch;
 	int x=1;
+    p.method="Instructions";
 	p.ali_file="Align.fa";
+    p.dismat=0;
     p.get_positions=1;
     p.get_frequencies=1;
     p.get_correlations=1;
+    p.n_generations=0;
+    p.cutoff=0.0;
+    p.qq_cut=0.1;
+    p.n_cut=10;
+    p.n_reps=1;
+    p.output="Sparse"; //Options FASTA, Binary
+    p.verb=0;
+    p.method=argv[x];
+    x++;
 	while (x < argc && (argv[x][0]=='-')) {
 		p_switch=argv[x];
 		if (p_switch.compare("--ali_file")==0) {
@@ -25,9 +38,30 @@ void GetParameters (run_params& p, int argc, const char **argv) {
         } else if (p_switch.compare("--distances")==0) {
             x++;
             p.dismat=atoi(argv[x]);
-        } else if (p_switch.compare("--cutoff")==0) {
+        } else if (p_switch.compare("--dist_cut")==0) {
             x++;
             p.dist_cut=atoi(argv[x]);
+        } else if (p_switch.compare("--generate")==0) {
+            x++;
+            p.n_generations=atoi(argv[x]);
+        } else if (p_switch.compare("--verb")==0) {
+            x++;
+            p.verb=atoi(argv[x]);
+        } else if (p_switch.compare("--q_nocorrel")==0) {
+            x++;
+            p.cutoff=atof(argv[x]);
+        } else if (p_switch.compare("--q_cut")==0) {
+            x++;
+            p.qq_cut=atof(argv[x]);
+        } else if (p_switch.compare("--n_cut")==0) {
+            x++;
+            p.n_cut=atoi(argv[x]);
+        } else if (p_switch.compare("--n_reps")==0) {
+            x++;
+            p.n_reps=atoi(argv[x]);
+        } else if (p_switch.compare("--output")==0) {
+            x++;
+            p.output=argv[x];
         } else {
 			cout << "Incorrect usage\n ";
             cout << p_switch << "\n";
@@ -41,31 +75,8 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     }
 }
 
-void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names) {
-    ifstream ali_file;
-    ali_file.open(p.ali_file.c_str());
-    string seq;
-    string str;
-    for (int i=0;i<1000000;i++) {
-        if (!(ali_file >> str)) break;
-        if (str.at(0)=='>') {
-            str.erase(0,1);
-            names.push_back(str);
-            if (seq.size()>0) {
-                seqs.push_back(seq);
-                seq.clear();
-            }
-        } else {
-            seq=seq+str;
-        }
-    }
-    if (seq.size()>0) {
-        seqs.push_back(seq);
-    }
-}
 
 void CheckBaseCase (vector<string>& seqs) {
-    cout << "Check base case\n";
     for (int i=0;i<seqs.size();i++) {
         for (int j=0;j<seqs[i].size();j++) {
             if (seqs[i].compare(j,1,"a")==0) {
@@ -133,7 +144,6 @@ void FindConsensus (string& consensus, vector<string>& seqs) {
 }
 
 void FindSVariants (vector<sparseseq>& variants, string& consensus, vector<string>& seqs) {
-    cout << "Find variants\n";
     for (int i=0;i<seqs.size();i++) {
         sparseseq s;
         for (int pos=0;pos<seqs[i].size();pos++) {
@@ -194,12 +204,14 @@ void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, v
 
 void GetSubsetsIJ (run_params p, const vector<string>& names, const vector< vector<int> >& seqdists, vector< vector<int> >& subsets) {
     FindDistanceSubsetsIJ(p.dist_cut,seqdists,subsets);
+    ofstream subs_file;
+    subs_file.open("Subset_data.out");
     cout << "Subsets\n";
     for (int i=0;i<subsets.size();i++) {
         for (int j=0;j<subsets[i].size();j++) {
-            cout << names[subsets[i][j]] << " ";
+            subs_file << names[subsets[i][j]] << " ";
         }
-        cout << "\n";
+        subs_file << "\n";
     }
 }
 
@@ -251,59 +263,56 @@ void FindDistanceSubsetsIJ(int cut, const vector< vector<int> >& seqdists, vecto
 }
 
 
-
-
-void ReadVariants (run_params& p, vector<site>& ali_stats) {
-    ifstream ali_file;
-    ali_file.open(p.ali_file);
-    for (int i=0;i<1000000;i++) {
-        string name;
-        if (!(ali_file >> name)) break;
-        if (name.compare(0,1,">")!=0) {
-            if (ali_stats.size()==0) {
-                for (int j=0;j<name.length();j++) {
-                    site s;
-                    s.A=0;
-                    s.C=0;
-                    s.G=0;
-                    s.T=0;
-                    if (name.compare(j,1,"a")==0||name.compare(j,1,"A")==0) {
-                        s.A++;
-                    }
-                    if (name.compare(j,1,"c")==0||name.compare(j,1,"C")==0) {
-                        s.C++;
-                    }
-                    if (name.compare(j,1,"g")==0||name.compare(j,1,"G")==0) {
-                        s.G++;
-                    }
-                    if (name.compare(j,1,"t")==0||name.compare(j,1,"T")==0) {
-                        s.T++;
-                    }
-                    ali_stats.push_back(s);
+void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats) {
+    for (int i=0;i<seqs.size();i++) {
+        if (ali_stats.size()==0) {
+            for (int j=0;j<seqs[i].length();j++) {
+                site s;
+                s.A=0;
+                s.C=0;
+                s.G=0;
+                s.T=0;
+                s.N=0;
+                if (seqs[i].compare(j,1,"A")==0) {
+                    s.A++;
+                    s.N++;
                 }
-            } else {
-                for (int j=0;j<name.length();j++) {
-                    if (name.compare(j,1,"a")==0||name.compare(j,1,"A")==0) {
-                        ali_stats[j].A++;
-                    }
-                    if (name.compare(j,1,"c")==0||name.compare(j,1,"C")==0) {
-                        ali_stats[j].C++;
-                    }
-                    if (name.compare(j,1,"g")==0||name.compare(j,1,"G")==0) {
-                        ali_stats[j].G++;
-                    }
-                    if (name.compare(j,1,"t")==0||name.compare(j,1,"T")==0) {
-                        ali_stats[j].T++;
-                    }
+                if (seqs[i].compare(j,1,"C")==0) {
+                    s.C++;
+                    s.N++;
+                }
+                if (seqs[i].compare(j,1,"G")==0) {
+                    s.G++;
+                    s.N++;
+                }
+                if (seqs[i].compare(j,1,"T")==0) {
+                    s.T++;
+                    s.N++;
+                }
+                ali_stats.push_back(s);
+            }
+        } else {
+            for (int j=0;j<seqs[i].length();j++) {
+                if (seqs[i].compare(j,1,"A")==0) {
+                    ali_stats[j].A++;
+                    ali_stats[j].N++;
+                }
+                if (seqs[i].compare(j,1,"C")==0) {
+                    ali_stats[j].C++;
+                    ali_stats[j].N++;
+                }
+                if (seqs[i].compare(j,1,"G")==0) {
+                    ali_stats[j].G++;
+                    ali_stats[j].N++;
+                }
+                if (seqs[i].compare(j,1,"T")==0) {
+                    ali_stats[j].T++;
+                    ali_stats[j].N++;
                 }
             }
-//        } else {
-//	  	cout << name << "\n";
-	}
+        }
     }
-    ali_file.close();
 }
-
 
 void FindVariants (vector<site>& ali_stats, vector<int>& var_positions) {
     for (int i=0;i<ali_stats.size();i++) {
@@ -376,9 +385,13 @@ void CalculateFrequencies (vector<site>& ali_stats, vector<string>& second) {
             }
 
             ali_stats[i].freq=c[2]/(c[2]+c[3]);
+            cout << ali_stats[i].A << " " << ali_stats[i].C << " " << ali_stats[i].G << " " << ali_stats[i].T << " " << second[i] << " " << ali_stats[i].freq << "\n";
+
         }
     }
 }
+
+
 
 void MakeInitialPairs (vector<int>& var_positions, vector<pr>& pairs) {
     for (int i=0;i<var_positions.size();i++) {
@@ -446,3 +459,64 @@ void FindCorrelations (vector<site>& ali_stats, vector<pr>& pairs) {
         pairs[i].correl=(top+0.)/(b+0.);
     }
 }
+
+
+void FindIdentical (const vector<int>& var_positions, const vector< vector<double> >& correls, vector< vector<int> >& ident) {
+    for (int i=0;i<var_positions.size();i++) {
+        vector<int> id;
+        id.push_back(i);
+        for (int j=i+1;j<var_positions.size();j++) {
+            int diff=0;
+            for (int k=0;k<var_positions.size();k++) {
+                if (correls[i][k]!=correls[j][k]) {
+                    diff=1;
+                    break;
+                }
+            }
+            if (diff==0) {
+                id.push_back(j);
+            }
+        }
+        ident.push_back(id);
+    }
+}
+
+void FindIDCorrel (double tol, const vector<int>& var_positions, const vector< vector<double> >& correls, vector< vector<int> >& ident) {
+    for (int i=0;i<var_positions.size();i++) {
+        vector<int> id;
+        id.push_back(i);
+        for (int j=i+1;j<var_positions.size();j++) {
+            if (correls[i][j]>1-tol) {
+                id.push_back(j);
+            }
+        }
+        ident.push_back(id);
+    }
+}
+
+
+void FindRemovals (const vector< vector<int> >& ident, vector<int>& to_rem) {
+    for (int i=0;i<ident.size();i++) {
+        for (int j=1;j<ident[i].size();j++) {
+            to_rem.push_back(ident[i][j]);
+        }
+    }
+    sort(to_rem.begin(),to_rem.end());
+    reverse(to_rem.begin(),to_rem.end());
+    to_rem.erase(unique(to_rem.begin(),to_rem.end()),to_rem.end());
+
+}
+
+void DoRemovals (const vector<int>& to_rem, vector< vector<double> >& correls, vector< vector<int> >& ident, vector<double>& frequencies) {
+    for (int i=0;i<to_rem.size();i++) {
+        for (int j=0;j<correls.size();j++) {
+            correls[j].erase(correls[j].begin()+to_rem[i]);
+        }
+    }
+    for (int i=0;i<to_rem.size();i++) {
+        correls.erase(correls.begin()+to_rem[i]);
+        ident.erase(ident.begin()+to_rem[i]);
+        frequencies.erase(frequencies.begin()+to_rem[i]);
+    }
+}
+

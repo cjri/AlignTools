@@ -9,99 +9,92 @@
 using namespace std;
 
 #include "aligntools.h"
+#include "distance_matrix.h"
+#include "diversity.h"
+#include "io.h"
+#include "rgen.h"
+#include "timesplit.h"
 #include "utilities.h"
+#include <Eigen/Dense>
 
 int main(int argc, const char **argv){
 
     //Code to read in an alignment.
     //Identifies variants and will make covariance matrix between these sites.
     
+    //Initialise random number generator
+    
 	run_params p;
 	GetParameters(p,argc,argv);
-
-    if (p.dismat==1) {
-        //Create distance matrix between sequences
-        vector<string> seqs;
-        vector<string> names;
-        ReadFastaAli(p,seqs,names);
-        CheckBaseCase(seqs);
-        string all_consensus;
-        FindConsensus(all_consensus,seqs);
-        vector<sparseseq> variants;
-        FindSVariants (variants,all_consensus,seqs);
-        //Thought: Do we want to check for ambiguous nucleotides.  Currently no.
-        
+    p.seed=(int) time(NULL);
+    gsl_rng_env_setup();
+    gsl_rng *rgen = gsl_rng_alloc (gsl_rng_taus);
+    gsl_rng_set (rgen, p.seed);
+    
+    vector<string> seqs;
+    vector<string> names;
+    ReadFastaAli(p,seqs,names);
+    CheckBaseCase(seqs);
+    
+    if (p.method.compare("DistanceMatrix")==0) {
         vector< vector<int> > seqdists;
-        FindPairwiseDistances (variants,seqs,seqdists);
-        for (int i=0;i<seqdists.size();i++) {
-            
-            for (int j=0;j<seqdists[i].size();j++) {
-                cout << seqdists[i][j] << " ";
-            }
-            cout << "\n";
-        }
-        
-        if (p.dist_cut>0) {
-            cout << "Here\n";
-            vector< vector<int> > subsets;
-            GetSubsetsIJ (p,names,seqdists,subsets);
-        }
+        MakeDistanceMatrix (p,1,seqs,names,seqdists);
         return 0;
     }
     
-	//Open alignment
+    //Get alignment statistics
     vector<site> ali_stats;
-    ReadVariants (p,ali_stats);
-            
-    //Next step - find variants
-    vector<int> var_positions;
-    FindVariants (ali_stats,var_positions);
-
+    GetAliStats (seqs,ali_stats);
+    
     //Consensus sequence
     vector<string> consensus;
     GetConsensus(ali_stats,consensus);
-    
-    vector<string> second=consensus;
-    CalculateFrequencies (ali_stats,second);
-    
-    ofstream vars_file;
-    vars_file.open("Variant_positions.out");
-    for (int i=0;i<var_positions.size();i++) {
-        vars_file << var_positions[i]+1 << " " << consensus[var_positions[i]] << " " << second[var_positions[i]] << "\n";
-    }
-    
-    //Get frequencies - binary
-    if (p.get_frequencies==1) {
-        ofstream freqs_file;
-        freqs_file.open("Variant_frequencies.out");
-        for (int i=0;i<var_positions.size();i++) {
-            freqs_file << ali_stats[var_positions[i]].freq << "\n";
-        }
-    }
-    
-    //Make matrices - might need to read again?  Or do from the whole alignment.
-    
-    if (p.get_correlations==1) {
-        vector<pr> pairs;
-        MakeInitialPairs (var_positions,pairs);
-        ConstructPairs (p,second,pairs);
+    int seq_length=consensus.size();
+  
 
-        //Find correlations
-        FindCorrelations (ali_stats,pairs);
-        ofstream correl_file;
-        correl_file.open("Variant_correlations.out");
-        int index=0;
-        for (int i=0;i<var_positions.size();i++) {
-            for (int j=0;j<var_positions.size();j++) {
-                correl_file << pairs[index].correl << " ";
-                index++;
-            }
-            correl_file << "\n";
-        }
+    //Next step - variant positions
+    vector<int> var_positions;
+    FindVariants (ali_stats,var_positions);
+    
+    if (p.method.compare("Diversity")==0) {
+        GetPiDiversity (p,seq_length,seqs,names);
+        return 0;
     }
     
+    if (p.method.compare("Random")==0) {
+        
+        GenerateRandomSequences (p,seq_length,consensus,var_positions,ali_stats,seqs);
+        
+    } else if (p.method.compare("TimedFreqs")==0) {
+        
+        GetTDNucleotideCounts (p,consensus,var_positions,ali_stats,seqs);
+        
+        
+    } else {
+        cout << "Instructions:\n";
+        cout << "./run_align DistanceMatrix <flags> : Calculates matrix of distances between sequences.\n";
+        cout << "./run_align Diversity <flags> : Calculates pi diversity for sequences in the alignment.\n";
+        cout << "./run_align Random <flags> : Generates random sequences.\n";
+        cout << "./run_align TimedFreqs <flags> : Separates sequences in an alignment by time and produces records of variant frequency over time.\n";
+        cout << "Official flags are:\n";
+        cout << " --ali_file <file> : Multiple sequence alignment file in .fasta format\n";
+        cout << "In Random:\n";
+        cout << " --generate <number> : Number of random sequences to generate\n";
+        cout << " --verb <number> : Write out variant details to file\n";
+        cout << " --output <type> : Output format for random files:\n";
+        cout << "       Sparse: [Default] Output positions of variants w.r.t. consensus\n";
+        cout << "       FASTA: Output as .fasta file format\n";
+        cout << "       Binary: Output as binary string at variant positions\n";
+        cout << "In TimeFreqs:\n";
+        cout << " --q_cut <frequency> : [Default 0.1] Minimum minor allele frequency to report\n";
+        cout << " --n_cut <value> : [Default 10] Minimum read depth when calling variant allele\n";
+        cout << " --n_reps <type> : [Default 1] Minimum number of times variant observed at given frequency and read depth:\n";
+
+    }
     
+    return 0;
     
+            
     return 0;
 }
 	

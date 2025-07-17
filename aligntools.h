@@ -15,6 +15,7 @@ using namespace std;
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_rng.h>
 
 #include <Eigen/Dense>
 
@@ -35,6 +36,7 @@ struct run_params {
     double qq_cut; //Frequency cutoff to print variants
     int n_cut; //Depth cutoff to print variants
     int n_reps; //Number of times variant observed
+    int denovo; //Add de novo variants to randomly-generated sequences
 };
 
 struct delet {

@@ -56,6 +56,8 @@ int main(int argc, const char **argv){
     vector<int> var_positions;
     FindVariants (ali_stats,var_positions);
     
+    cout << "Positions " << var_positions.size() << " " << consensus.size() << "\n";
+    
     if (p.method.compare("Diversity")==0) {
         GetPiDiversity (p,seq_length,seqs,names);
         return 0;
@@ -63,7 +65,7 @@ int main(int argc, const char **argv){
     
     if (p.method.compare("Random")==0) {
         
-        GenerateRandomSequences (p,seq_length,consensus,var_positions,ali_stats,seqs);
+        GenerateRandomSequences (p,seq_length,consensus,var_positions,ali_stats,seqs,rgen);
         
     } else if (p.method.compare("TimedFreqs")==0) {
         

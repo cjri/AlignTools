@@ -10,7 +10,7 @@
 
 using namespace Eigen;
 
-void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& seqs) {
+void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& seqs,gsl_rng *rgen) {
     vector<string> second=consensus;
     CalculateFrequencies (ali_stats,second);
     
@@ -45,7 +45,7 @@ void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& con
     vector< vector<double> > correls_cut;
     ExtractCorrelations (p,var_positions,second,ali_stats,pairs,correls_cut);
     
-    GenerateBitstrings (p,p.n_generations,seq_length,consensus,second,var_positions,var_positions_cut,var_positions_rem,var_freqs_cut,var_freqs_rem,correls_cut,seqs);
+    GenerateBitstrings (p,p.n_generations,seq_length,consensus,second,var_positions,var_positions_cut,var_positions_rem,var_freqs_cut,var_freqs_rem,correls_cut,seqs,rgen);
 
 }
 
@@ -81,7 +81,7 @@ void ExtractCorrelations (run_params& p, vector<int>& var_positions, vector<stri
     }
 }
 
-void GenerateBitstrings (run_params& p, int n, int seq_length, const vector<string>& consensus, const vector<string>& second, const vector<int>& var_positions, const vector<int>& var_positions_cut, const vector<int>& var_positions_rem, vector<double>& var_freqs_cut, vector<double>& var_freqs_rem, vector< vector<double> >& correls_cut, vector<string>& seqs) {
+void GenerateBitstrings (run_params& p, int n, int seq_length, const vector<string>& consensus, const vector<string>& second, const vector<int>& var_positions, const vector<int>& var_positions_cut, const vector<int>& var_positions_rem, vector<double>& var_freqs_cut, vector<double>& var_freqs_rem, vector< vector<double> >& correls_cut, vector<string>& seqs, gsl_rng *rgen) {
     int dim=var_freqs_cut.size();
     
     //Eigen::VectorXd mu = Eigen::Map<Eigen::VectorXd>(frequencies.data(), frequencies.size())
@@ -106,22 +106,148 @@ void GenerateBitstrings (run_params& p, int n, int seq_length, const vector<stri
     //Find all deletions: Approach to handling indels
     vector<delet> deletions;
     GetDeletions (seqs,deletions);
+    
+    vector< vector<int> > bitstrings;
+    vector< vector<int> > denovo;
+
+    if (p.denovo==1) {
+        //Find deletion sites of at least 50%
+        vector<int> delsites;
+        FindDeletedSites50(deletions,delsites);
+        
+        //Find variant positions that don't occur at deleted sites
+        vector<int> conf_variants;
+        GetConfVariants (var_positions,delsites,conf_variants);
+        
+        //Find invariant positions
+        vector<int> inv_sites;
+        GetInvariantSites (consensus,conf_variants,delsites,inv_sites);
+        
+        //invprop is the proportion of non-deleted sites with no variation
+        double invprop=1-((conf_variants.size())/(consensus.size() - delsites.size()+0.));
+        double invtot=consensus.size()-(conf_variants.size()+delsites.size());
+        //cout << "Invariant proporion " << invprop << "\n";
+        
+        //Have proportion of sites with variants.
+        
+        
+        
+        double rate_denovo=0;
+        if (invprop>0) {
+            //Estimate rate of variant gain per site
+            //This assumes rate is constant at all sites.
+            //Calculated from the number of sites with no variants via a Poisson formula.
+            
+            double rate = -log(invprop);
+            //cout << "Rate " << rate << "\n";
+            
+            //Estimate proportion of ratetime in new versus old tree
+            double rat=KingmanRatio(seqs.size());
+            
+            //Assume evolution occurs at the given rate for the new branch
+            rate_denovo=rate*rat*invtot;
+            cout << "Here " << rate_denovo << "\n";
+                        
+        }
+        
+        double tolerance = 1e-6;
+        //Call string generation
+        vector< vector<int> > bitstrings_cut=RandomString (dim,seq_length,n,tolerance,mu,omega,positions);
+        
+        
+        //Here add in the other frequencies
+        UncorrelatedCorrection (p,var_positions_cut,var_positions_rem,var_freqs_cut,var_freqs_rem,bitstrings_cut,bitstrings);
+
+        
+        //Find positions of de novo mutations for each sequence
+        for (int i=0;i<bitstrings.size();i++) {
+            vector<int> dn;
+            //double r=rate_denovo;
+            //Numbers of de novo sites in each genome
+            int ndn=gsl_ran_poisson(rgen,rate_denovo);
+            vector<int> inv_sites_found;
+            for (int j=0;j<inv_sites.size();j++) {
+                inv_sites_found.push_back(0);
+            }
+            for (int j=0;j<ndn;j++) {
+                int site=floor(gsl_rng_uniform(rgen)*inv_sites.size()+0.5)-1;
+                if (inv_sites_found[site]==0) {
+                    site=inv_sites[site];
+                    dn.push_back(site);
+                    inv_sites_found[site]=1;
+                }
+            }
+            denovo.push_back(dn);
+        }
+        
+        for (int i=0;i<denovo.size();i++) {
+            cout << "String " << i << " " << rate_denovo << " ";
+            for (int j=0;j<denovo[i].size();j++) {
+                cout << denovo[i][j] << " ";
+            }
+            cout << "\n";
+        }
+
+        
+    } else {
+        double tolerance = 1e-6;
+        //Call string generation
+        vector< vector<int> > bitstrings_cut=RandomString (dim,seq_length,n,tolerance,mu,omega,positions);
+        
+        
+        //Here add in the other frequencies
+        UncorrelatedCorrection (p,var_positions_cut,var_positions_rem,var_freqs_cut,var_freqs_rem,bitstrings_cut,bitstrings);
+    
+    }
+    
 /*    cout << "Deletions\n";
     for (int k=0;k<deletions.size();k++) {
         cout << deletions[k].start << " " << deletions[k].length << " " << deletions[k].freq << "\n";
     }*/
     
-    double tolerance = 1e-6;
-    //Call string generation
-    vector< vector<int> > bitstrings_cut=RandomString (dim,seq_length,n,tolerance,mu,omega,positions);
     
     
-    //Here add in the other frequencies
-    vector< vector<int> > bitstrings;
-    UncorrelatedCorrection (p,var_positions_cut,var_positions_rem,var_freqs_cut,var_freqs_rem,bitstrings_cut,bitstrings);
     
-    OutputBitstrings (p,bitstrings,var_positions,consensus,second,deletions);
+    OutputBitstrings (p,bitstrings,var_positions,consensus,second,deletions,denovo);
         
+}
+
+void GetConfVariants (const vector<int>& var_positions, vector<int> delsites, vector<int>& conf_variants) {
+    for (int i=0;i<var_positions.size();i++) {
+        int deleted=0;
+        for (int j=0;j<delsites.size();j++) {
+            if (var_positions[i]==delsites[j]) {
+                deleted=1;
+                break;
+            }
+        }
+        if (deleted==0) {
+            conf_variants.push_back(var_positions[i]);
+        }
+    }
+}
+
+void GetInvariantSites (const vector<string>& consensus, vector<int>& conf_variants, vector<int>& delsites, vector<int>& inv_sites) {
+    for (int i=0;i<consensus.size();i++) {
+        int found=0;
+        for (int j=0;j<conf_variants.size();j++) {
+            if (conf_variants[j]==i) {
+                found=1;
+                break;
+            }
+        }
+        if (found==0) {
+            for (int j=0;j<delsites.size();j++) {
+                if (delsites[j]==i) {
+                    found=1;
+                    break;
+                }
+            }
+        }
+        if (found==0) {
+            inv_sites.push_back(i);
+        }
+    }
 }
 
 void GetDeletions (vector<string>& seqs, vector<delet>& deletions) {
@@ -179,6 +305,17 @@ void GetDeletions (vector<string>& seqs, vector<delet>& deletions) {
     }
 }
 
+void FindDeletedSites50 (const vector<delet>& deletions, vector<int>& delsites) {
+    for (int i=0;i<deletions.size();i++) {
+        if (deletions[i].freq>0.5) {
+            for (int j=0;j<deletions[i].length;j++) {
+                delsites.push_back(deletions[i].start+j);
+            }
+        }
+    }
+    sort(delsites.begin(),delsites.end());
+    delsites.erase(unique(delsites.begin(),delsites.end()),delsites.end());
+}
 
 
 void UncorrelatedCorrection (run_params& p, const vector<int>& var_positions_cut, const vector<int>& var_positions_rem, const vector<double>& var_freqs_cut, const vector<double>& var_freqs_rem, vector< vector<int> >& bitstrings_cut, vector< vector<int> >& bitstrings) {
@@ -243,4 +380,21 @@ vector< vector<int> > RandomString (int dim, int seq_length, int n, double& tole
         random_strings.push_back(bitstring);
     }
     return random_strings;
+}
+
+double KingmanRatio (int n) {
+    //Proportion more time in new branches
+    if (n>1) {
+        double ks=0;
+        double ks2=0;
+        for (int k=2;k<=n;k++) {
+            ks=ks+(2./(k-1));
+        }
+        ks2=ks+(2./n);
+        //cout << "Here " << ks << " " << ks2 << "\n";
+        double prop=(ks2-ks)/ks;
+        return prop;
+    } else {
+        return 0;
+    }
 }

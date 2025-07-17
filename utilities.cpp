@@ -20,6 +20,7 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     p.qq_cut=0.1;
     p.n_cut=10;
     p.n_reps=1;
+    p.denovo=0;
     p.output="Sparse"; //Options FASTA, Binary
     p.verb=0;
     p.method=argv[x];
@@ -59,6 +60,10 @@ void GetParameters (run_params& p, int argc, const char **argv) {
         } else if (p_switch.compare("--n_reps")==0) {
             x++;
             p.n_reps=atoi(argv[x]);
+        } else if (p_switch.compare("--denovo")==0) {
+            x++;
+            p.denovo=atoi(argv[x]);
+
         } else if (p_switch.compare("--output")==0) {
             x++;
             p.output=argv[x];

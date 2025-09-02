@@ -14,3 +14,5 @@ void OutputBitstringsFasta (const vector<int>& var_positions, const vector<strin
 void EditDenovo (vector< vector<int> >& denovo);
 void OutputNucleotideCountsTime (run_params& p, vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site> >& ali_stats_t);
 void OutputVariantFrequencies (vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site> >& ali_stats_t);
+void OutputAlignmentFiltered (vector<string>& names, vector<string>& seqs, vector<int>& keep);
+void OutputAlignmentSFiltered (vector<string>& names, vector<string>& seqs, vector<int>& sample);

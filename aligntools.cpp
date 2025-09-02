@@ -11,6 +11,7 @@ using namespace std;
 #include "aligntools.h"
 #include "distance_matrix.h"
 #include "diversity.h"
+#include "editing.h"
 #include "io.h"
 #include "rgen.h"
 #include "timesplit.h"
@@ -42,6 +43,102 @@ int main(int argc, const char **argv){
         return 0;
     }
     
+    if (p.method.compare("FilterPdiff")==0) {
+        FilterPDiff (p,seqs,names,rgen);
+        /*
+        string all_consensus;
+        FindConsensus(all_consensus,seqs);
+        vector<sparseseq> variants;
+        FindSVariants (variants,all_consensus,seqs);
+        cout << variants.size() << "\n";
+        
+        cout << variants[0].locus.size() << "\n";
+        
+        
+        cout << "Length " << seqs[0].length() << "\n";
+        
+        p.qq_cut=0.01;
+        int threshold=seqs[0].length()*p.qq_cut;
+        //Keep track of sequences
+        vector<int> done;
+        vector<int> index;
+        for (int i=0;i<seqs.size();i++) {
+            done.push_back(0);
+        }
+        
+        vector<int> sample;
+        int donezero=1;
+        while (donezero==1) {
+            index.clear();
+            for (int i=0;i<done.size();i++) {
+                if (done[i]==0) {
+                    index.push_back(i);
+                }
+            }
+            cout << "Index size " << index.size() << "\n";
+            int selected=floor(gsl_rng_uniform(rgen)*index.size()+0.5)-1;
+            selected=index[selected];
+            done[selected]=1;
+            sample.push_back(selected);
+            
+            //Find everything within threshold and remove
+            for (int i=0;i<variants.size();i++) {
+                if (done[i]==0) {
+                    //Find unique difference positions between selected and i
+                    vector<int> uniq;
+                    for (int k=0;k<variants[i].locus.size();k++) {
+                        uniq.push_back(variants[i].locus[k]);
+                    }
+                    for (int k=0;k<variants[selected].locus.size();k++) {
+                        uniq.push_back(variants[selected].locus[k]);
+                    }
+                    sort(uniq.begin(),uniq.end());
+                    uniq.erase(unique(uniq.begin(),uniq.end()),uniq.end());
+                    
+                    //Run comparison over uniq positions
+                    int dist=0;
+                    int kk=0;
+                    while (kk<uniq.size()&&dist<threshold) {
+                        if (seqs[i][uniq[kk]]=='A'||seqs[i][uniq[kk]]=='C'||seqs[i][uniq[kk]]=='G'||seqs[i][uniq[kk]]=='T') {
+                            if (seqs[selected][uniq[kk]]=='A'||seqs[selected][uniq[kk]]=='C'||seqs[selected][uniq[kk]]=='G'||seqs[selected][uniq[kk]]=='T') {
+                                if (seqs[i][uniq[kk]]!=seqs[selected][uniq[kk]]) {
+                                    dist++;
+                                }
+                            }
+                        }
+                        kk++;
+                    }
+                    if (dist<threshold) {
+                        done[i]=1;
+                    }
+                }
+            }
+            donezero=0;
+            for (int i=0;i<done.size();i++) {
+                if (done[i]==0) {
+                    donezero=1;
+                    break;
+                }
+            }
+            
+            
+        }
+        sort(sample.begin(),sample.end());
+        sample.erase(unique(sample.begin(),sample.end()),sample.end());
+
+        cout << "Sample\n";
+        for (int i=0;i<sample.size();i++) {
+            cout << sample[i] << " ";
+        }
+        cout << "\n";
+        OutputAlignmentSFiltered (names,seqs,sample);
+        
+        */
+        
+        return 0;
+    }
+
+    
     //Get alignment statistics
     vector<site> ali_stats;
     GetAliStats (seqs,ali_stats);
@@ -57,6 +154,12 @@ int main(int argc, const char **argv){
     FindVariants (ali_stats,var_positions);
     
     cout << "Positions " << var_positions.size() << " " << consensus.size() << "\n";
+    
+    if (p.method.compare("FilterSiteQ")==0) {
+        FilterAlignmentQ (p,ali_stats,seqs,names);
+        return 0;
+    }
+
     
     if (p.method.compare("Diversity")==0) {
         GetPiDiversity (p,seq_length,seqs,names);
@@ -77,6 +180,10 @@ int main(int argc, const char **argv){
         cout << "./run_align DistanceMatrix <flags> : Calculates matrix of distances between sequences.\n";
         cout << "./run_align Diversity <flags> : Calculates pi diversity for sequences in the alignment.\n";
         cout << "./run_align Random <flags> : Generates random sequences.\n";
+        cout << "./run_align FilterSiteQ <flags> : Generates random sequences.\n";
+        cout << "Flags are:\n";
+        cout << " --q_cut <frequency> : [Default 0.1] Require this fraction of sites to have an {A,C,G,T} nucleotide\n";
+        cout << "Output to Output_alignment.fa\n";
         cout << "./run_align TimedFreqs <flags> : Separates sequences in an alignment by time and produces records of variant frequency over time.\n";
         cout << "Official flags are:\n";
         cout << " --ali_file <file> : Multiple sequence alignment file in .fasta format\n";

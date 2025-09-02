@@ -11,21 +11,19 @@ void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names) {
     ali_file.open(p.ali_file.c_str());
     string seq;
     string str;
-    for (int i=0;i<1000000;i++) {
-        if (!(ali_file >> str)) break;
+    while (getline(ali_file, str)) {
+        if (str.empty()) continue;
         if (str.at(0)=='>') {
             str.erase(0,1);
             names.push_back(str);
-            if (seq.size()>0) {
+            if (!seq.empty()) {
                 seqs.push_back(seq);
                 seq.clear();
             }
         } else {
             seq=seq+str;
+
         }
-    }
-    if (seq.size()>0) {
-        seqs.push_back(seq);
     }
 }
 
@@ -399,5 +397,39 @@ void OutputVariantFrequencies (vector<string>& consensus, vector<string>& second
             ncf_file << times_uniq[t] << " " << ali_stats_t[t][var_positions[i]].freq << " ";
         }
         ncf_file << "\n";
+    }
+}
+
+void OutputAlignmentFiltered (vector<string>& names, vector<string>& seqs, vector<int>& keep) {
+    //Filtered by nucleotide positions
+    ofstream a_file;
+    a_file.open("Output_alignment.fa");
+    for (int i=0;i<names.size();i++) {
+        a_file << ">" << names[i] << "\n";
+        for (int j=0;j<keep.size();j++) {
+            if (seqs[i][keep[j]]=='N') {
+                a_file << "-";
+            } else {
+                a_file << seqs[i][keep[j]];
+            }
+        }
+        a_file << "\n";
+    }
+}
+
+void OutputAlignmentSFiltered (vector<string>& names, vector<string>& seqs, vector<int>& sample) {
+    //Filtered by sequences
+    ofstream a_file;
+    a_file.open("Output_alignment.fa");
+    for (int i=0;i<sample.size();i++) {
+        a_file << ">" << names[sample[i]] << "\n";
+        for (int j=0;j<seqs[sample[i]].size();j++) {
+            if (seqs[sample[i]][j]=='N') {
+                a_file << "-";
+            } else {
+                a_file << seqs[sample[i]][j];
+            }
+        }
+        a_file << "\n";
     }
 }

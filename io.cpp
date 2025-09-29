@@ -6,7 +6,7 @@
 #include <cstring>
 #include <random>
 
-void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names) {
+void ReadFastaAli (run_params& p, vector<string>& seqs, vector<string>& names) {
     ifstream ali_file;
     ali_file.open(p.ali_file.c_str());
     string seq;
@@ -24,6 +24,10 @@ void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names) {
             seq=seq+str;
 
         }
+    }
+    if (seqs.size()==0) {
+        p.error=1;
+        cout << "Error: Alignment file not found.  Specify using --ali_file <filename>\n";
     }
 }
 

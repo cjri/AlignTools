@@ -23,6 +23,7 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     p.denovo=0;
     p.output="Sparse"; //Options FASTA, Binary
     p.verb=0;
+    p.error=0;
     p.method=argv[x];
     x++;
 	while (x < argc && (argv[x][0]=='-')) {

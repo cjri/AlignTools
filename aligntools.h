@@ -37,6 +37,7 @@ struct run_params {
     int n_cut; //Depth cutoff to print variants
     int n_reps; //Number of times variant observed
     int denovo; //Add de novo variants to randomly-generated sequences
+    int error; //Error flag
 };
 
 struct delet {

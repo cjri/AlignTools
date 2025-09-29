@@ -1,5 +1,5 @@
 
-void ReadFastaAli (run_params p, vector<string>& seqs, vector<string>& names);
+void ReadFastaAli (run_params& p, vector<string>& seqs, vector<string>& names);
 void ReadTimes (vector<int>& times, vector<int>& times_uniq);
 void PrintVariantPositions (vector<int>& var_positions, vector<string>& consensus, vector<string>& second);
 void PrintFrequencies (vector<double>& frequencies);

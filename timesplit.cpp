@@ -66,3 +66,56 @@ void GetTimeVariants (const vector<int>& times_uniq, vector< vector<site> >& ali
         FindVariants (ali_stats_t[i],v);
     }
 }
+
+void TDSplit (run_params& p, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& names, vector<string>& seqs) {
+    vector<int> times;
+    vector<int> times_uniq;
+    ReadTimes(times,times_uniq);
+
+    //For each time, generate a sub-alignment of the sequences
+    //Time-dependent sequences
+    vector< vector<string> > seqs_t;
+    vector< vector<string> > names_t;
+    SplitSeqsNames (times,times_uniq,seqs,names,seqs_t,names_t);
+    
+    //Output sequences
+    for (int i=0;i<times_uniq.size();i++) {
+        string name=modifyFilename(p.ali_file,times_uniq[i]);
+        ofstream time_file;
+        time_file.open(name.c_str());
+        for (int j=0;j<seqs_t[i].size();j++) {
+            time_file << names_t[i][j] << "\n";
+            time_file << seqs_t[i][j] << "\n";
+        }
+        time_file.close();
+        
+        
+    }
+}
+
+void SplitSeqsNames (const vector<int>& times, const vector<int>& times_uniq, const vector<string>& seqs, const vector<string>& names, vector< vector<string> >& seqs_t, vector< vector<string> >& names_t) {
+    for (int i=0;i<times_uniq.size();i++) {
+        vector<string> s;
+        vector<string> n;
+        for (int j=0;j<seqs.size();j++) {
+            if (times[j]==times_uniq[i]) {
+                s.push_back(seqs[j]);
+                n.push_back(names[j]);
+            }
+        }
+        seqs_t.push_back(s);
+        names_t.push_back(n);
+    }
+}
+
+
+string modifyFilename(string ali_file, int i) {
+    // Find the last dot in the filename
+    size_t dotPos = ali_file.find_last_of('.');
+    if (dotPos == string::npos) {
+        return ali_file + to_string(i);
+    }
+    string start = ali_file.substr(0, dotPos);
+    string end  = ali_file.substr(dotPos);
+    return start +  "_" + to_string(i) + end;
+}

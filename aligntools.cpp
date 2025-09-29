@@ -36,6 +36,10 @@ int main(int argc, const char **argv){
     vector<string> names;
     ReadFastaAli(p,seqs,names);
     CheckBaseCase(seqs);
+    if (p.error==1) {
+        cout << "Terminate with error\n";
+        return 0;
+    }
     
     if (p.method.compare("DistanceMatrix")==0) {
         vector< vector<int> > seqdists;
@@ -153,7 +157,7 @@ int main(int argc, const char **argv){
     vector<int> var_positions;
     FindVariants (ali_stats,var_positions);
     
-    cout << "Positions " << var_positions.size() << " " << consensus.size() << "\n";
+    //cout << "Positions " << var_positions.size() << " " << consensus.size() << "\n";
     
     if (p.method.compare("FilterSiteQ")==0) {
         FilterAlignmentQ (p,ali_stats,seqs,names);
@@ -174,30 +178,41 @@ int main(int argc, const char **argv){
         
         GetTDNucleotideCounts (p,consensus,var_positions,ali_stats,seqs);
         
+    } else if (p.method.compare("TimeSplit")==0) {
+        
+        TDSplit (p,consensus,var_positions,ali_stats,names,seqs);
+        
         
     } else {
         cout << "Instructions:\n";
         cout << "./run_align DistanceMatrix <flags> : Calculates matrix of distances between sequences.\n";
+        cout << "\n";
         cout << "./run_align Diversity <flags> : Calculates pi diversity for sequences in the alignment.\n";
+        cout << "\n";
         cout << "./run_align Random <flags> : Generates random sequences.\n";
-        cout << "./run_align FilterSiteQ <flags> : Generates random sequences.\n";
         cout << "Flags are:\n";
-        cout << " --q_cut <frequency> : [Default 0.1] Require this fraction of sites to have an {A,C,G,T} nucleotide\n";
-        cout << "Output to Output_alignment.fa\n";
-        cout << "./run_align TimedFreqs <flags> : Separates sequences in an alignment by time and produces records of variant frequency over time.\n";
-        cout << "Official flags are:\n";
-        cout << " --ali_file <file> : Multiple sequence alignment file in .fasta format\n";
-        cout << "In Random:\n";
         cout << " --generate <number> : Number of random sequences to generate\n";
         cout << " --verb <number> : Write out variant details to file\n";
         cout << " --output <type> : Output format for random files:\n";
         cout << "       Sparse: [Default] Output positions of variants w.r.t. consensus\n";
         cout << "       FASTA: Output as .fasta file format\n";
         cout << "       Binary: Output as binary string at variant positions\n";
-        cout << "In TimeFreqs:\n";
+        cout << "\n";
+        cout << "./run_align FilterSiteQ <flags> : Removes positions in the genome which don't contain {A, C, G, T} nucleotides for many of the sequences.\n";
+        cout << "Flags are:\n";
+        cout << " --q_cut <frequency> : [Default 0.1] Require this fraction of sites to have an {A,C,G,T} nucleotide\n";
+        cout << "Output to Output_alignment.fa\n";
+        cout << "\n";
+        cout << "./run_align TimedFreqs <flags> : Separates sequences in an alignment by time and produces a record of variant frequency over time.\n";
+        cout << "Flags are:\n";
         cout << " --q_cut <frequency> : [Default 0.1] Minimum minor allele frequency to report\n";
         cout << " --n_cut <value> : [Default 10] Minimum read depth when calling variant allele\n";
         cout << " --n_reps <type> : [Default 1] Minimum number of times variant observed at given frequency and read depth:\n";
+        cout << "\n";
+        cout << "./run_align TimeSplit <flags> : Splits alignment into time-specific sub-alignments and printes these alignments.\n";
+        cout << "Flags are:\n";
+        cout << " --ali_file <file> : Multiple sequence alignment file in .fasta format\n";
+        cout << "\n";
 
     }
     

@@ -6,7 +6,7 @@
 #include <string>
 #include <cstring>
 
-void FilterAlignmentQ (run_params& p, vector<site>& ali_stats, vector<string>& seqs, vector<string>& names) {
+void FilterAlignmentQ (run_params& p, vector<site2>& ali_stats, vector<string>& seqs, vector<string>& names) {
     //Filter the genome sequence alignment keeping only positions at which at least a fraction p.qq_cut of the sequences have an {A,C,G,T} nucleotide.
     int max=0;
     for (int i=0;i<ali_stats.size();i++) {
@@ -19,7 +19,11 @@ void FilterAlignmentQ (run_params& p, vector<site>& ali_stats, vector<string>& s
     //cout << "Threshold " << threshold << "\n";
     vector<int> keep;
     for (int i=0;i<ali_stats.size();i++) {
-        if (ali_stats[i].A+ali_stats[i].C+ali_stats[i].G+ali_stats[i].T>=threshold) {
+        int count=0;
+        for (int j=0;j<ali_stats[i].counts.size();j++) {
+            count=count+ali_stats[i].counts[j];
+        }
+        if (count>=threshold) {
             keep.push_back(i);
             //cout << i << " " << ali_stats[i].A+ali_stats[i].C+ali_stats[i].G+ali_stats[i].T << "\n";
         }
@@ -28,13 +32,13 @@ void FilterAlignmentQ (run_params& p, vector<site>& ali_stats, vector<string>& s
     OutputAlignmentFiltered (names,seqs,keep);
 }
 
-void FilterPDiff (run_params& p, vector<string>& seqs, vector<string>& names, gsl_rng *rgen) {
+void FilterPDiff (run_params& p, vector<string>& seqs, vector<string>& names, vector<char>& alphabet, gsl_rng *rgen) {
     //Filter the genome sequence alignment, repeatedly choosing a random sequence, then removing anything with more than p.qq_cut fraction difference
     //Makes a smaller alignment covering the overall diversity of the sequences
     string all_consensus;
-    FindConsensus(all_consensus,seqs);
+    FindConsensus2(all_consensus,alphabet,seqs);
     vector<sparseseq> variants;
-    FindSVariants (variants,all_consensus,seqs);
+    FindSVariants (variants,all_consensus,alphabet,seqs);
     //cout << variants.size() << "\n";
     //cout << "Length " << seqs[0].length() << "\n";
     
@@ -80,11 +84,11 @@ void FilterPDiff (run_params& p, vector<string>& seqs, vector<string>& names, gs
                 int dist=0;
                 int kk=0;
                 while (kk<uniq.size()&&dist<threshold) {
-                    if (seqs[i][uniq[kk]]=='A'||seqs[i][uniq[kk]]=='C'||seqs[i][uniq[kk]]=='G'||seqs[i][uniq[kk]]=='T') {
-                        if (seqs[selected][uniq[kk]]=='A'||seqs[selected][uniq[kk]]=='C'||seqs[selected][uniq[kk]]=='G'||seqs[selected][uniq[kk]]=='T') {
-                            if (seqs[i][uniq[kk]]!=seqs[selected][uniq[kk]]) {
-                                dist++;
-                            }
+                    int check1=CheckAlphabet(alphabet,seqs[i][uniq[kk]]);
+                    int check2=CheckAlphabet(alphabet,seqs[selected][uniq[kk]]);
+                    if (check1==1&&check2==1) {
+                        if (seqs[i][uniq[kk]]!=seqs[selected][uniq[kk]]) {
+                            dist++;
                         }
                     }
                     kk++;

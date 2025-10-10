@@ -7,7 +7,7 @@
 #include <string>
 #include <cstring>
 
-void GetTDNucleotideCounts (run_params& p, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& seqs) {
+void GetTDNucleotideCounts (run_params& p, vector<string>& consensus, vector<char>& alphabet, vector<int>& var_positions, vector<site2>& ali_stats, vector<string>& seqs) {
     vector<int> times;
     vector<int> times_uniq;
     ReadTimes(times,times_uniq);
@@ -18,21 +18,21 @@ void GetTDNucleotideCounts (run_params& p, vector<string>& consensus, vector<int
     SplitSeqs (times,times_uniq,seqs,seqs_t);
     
     //Alignment statistics
-    vector< vector<site> > ali_stats_t;
-    SplitAliStats (times_uniq,seqs_t,ali_stats_t);
+    vector< vector<site2> > ali_stats_t;
+    SplitAliStats (times_uniq,alphabet,seqs_t,ali_stats_t);
     
     //Time-dependent variant frequencies
     GetTimeVariants (times_uniq,ali_stats_t);
     
     vector<string> second=consensus;
-    CalculateFrequencies (ali_stats,second);
+    CalculateFrequencies (ali_stats,alphabet,second);
 
     for (int i=0;i<times_uniq.size();i++) {
         vector<string> temp=consensus;
         for (int j=0;j<ali_stats_t[i].size();j++) {
             ali_stats_t[i][j].freq=0;
         }
-        CalculateFrequencies (ali_stats_t[i],temp);
+        CalculateFrequencies (ali_stats_t[i],alphabet,temp);
     }
     
     //Go through the frequencies of each variant with time
@@ -52,15 +52,15 @@ void SplitSeqs (const vector<int>& times, const vector<int>& times_uniq, const v
     }
 }
 
-void SplitAliStats (const vector<int>& times_uniq, const vector< vector<string> >& seqs_t, vector< vector<site> >& ali_stats_t) {
+void SplitAliStats (const vector<int>& times_uniq, vector<char>& alphabet, const vector< vector<string> >& seqs_t, vector< vector<site2> >& ali_stats_t) {
     for (int i=0;i<times_uniq.size();i++) {
-        vector<site> a;
-        GetAliStats (seqs_t[i],a);
+        vector<site2> a;
+        GetAliStats2 (seqs_t[i],alphabet,a);
         ali_stats_t.push_back(a);
     }
 }
 
-void GetTimeVariants (const vector<int>& times_uniq, vector< vector<site> >& ali_stats_t) {
+void GetTimeVariants (const vector<int>& times_uniq, vector< vector<site2> >& ali_stats_t) {
     for (int i=0;i<times_uniq.size();i++) {
         vector<int> v;
         FindVariants (ali_stats_t[i],v);
@@ -84,7 +84,7 @@ void TDSplit (run_params& p, vector<string>& consensus, vector<int>& var_positio
         ofstream time_file;
         time_file.open(name.c_str());
         for (int j=0;j<seqs_t[i].size();j++) {
-            time_file << names_t[i][j] << "\n";
+            time_file << ">" << names_t[i][j] << "\n";
             time_file << seqs_t[i][j] << "\n";
         }
         time_file.close();

@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <unordered_map>
+#include <algorithm>
 
 
 void GetParameters (run_params& p, int argc, const char **argv) {
@@ -24,7 +26,9 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     p.output="Sparse"; //Options FASTA, Binary
     p.verb=0;
     p.error=0;
+    p.type=0;
     p.method=argv[x];
+    cout << "Method " << p.method << "\n";
     x++;
 	while (x < argc && (argv[x][0]=='-')) {
 		p_switch=argv[x];
@@ -84,22 +88,36 @@ void GetParameters (run_params& p, int argc, const char **argv) {
 
 void CheckBaseCase (vector<string>& seqs) {
     for (int i=0;i<seqs.size();i++) {
-        for (int j=0;j<seqs[i].size();j++) {
-            if (seqs[i].compare(j,1,"a")==0) {
-                seqs[i][j]='A';
-            } else if (seqs[i].compare(j,1,"c")==0) {
-                seqs[i][j]='C';
-            } else if (seqs[i].compare(j,1,"g")==0) {
-                seqs[i][j]='G';
-            } else if (seqs[i].compare(j,1,"t")==0) {
-                seqs[i][j]='T';
-            } else if (seqs[i].compare(j,1,"n")==0) {
-                seqs[i][j]='N';
-            } else if (seqs[i].compare(j,1,"-")==0) {
-                seqs[i][j]='N';
-            }
+        transform(seqs[i].begin(), seqs[i].end(), seqs[i].begin(),
+                  ::toupper);
+    }
+}
+
+void GetAlignmentType (run_params& p, vector<char>& alphabet, vector<string>& seqs) {
+    //Uses first sequence.  Protein or nucleotide
+    vector<char> nucs = {'A','C','G','T'};
+    vector<char> nuc_chars = {'A','C','G','T','U','N','R','Y','S','W','K','M','B','D','H','V'};
+    vector<char> aa_chars = {'A','C','D','E','F','G','H','I','L','K','M','N','P','Q','R','S','T','V','W','Y'};
+    double nuc_count = 0;
+    double aa_count  = 0;
+    for (int i=0;i<seqs[0].size();i++) {
+        char charToFind = seqs[0][i];
+        auto it1 = std::find(nuc_chars.begin(), nuc_chars.end(), charToFind);
+        auto it2 = std::find(aa_chars.begin(), aa_chars.end(), charToFind);
+        if (it1 != nuc_chars.end()) {
+            nuc_count++;
+        }
+        if (it2 != aa_chars.end()) {
+            aa_count++;
         }
     }
+    if (aa_count>nuc_count) {
+        p.type=1;
+        alphabet=aa_chars;
+    } else {
+        alphabet=nucs;
+    }
+    cout << "Type " << p.type << "\n";
 }
 
 void FindConsensus (string& consensus, vector<string>& seqs) {
@@ -149,12 +167,48 @@ void FindConsensus (string& consensus, vector<string>& seqs) {
     }
 }
 
-void FindSVariants (vector<sparseseq>& variants, string& consensus, vector<string>& seqs) {
+void FindConsensus2 (string& consensus, vector<char>& alphabet, vector<string>& seqs) {
+    consensus=seqs[0];
+    if (seqs.size()>1) {
+        for (int pos=0;pos<seqs[0].size();pos++) {
+            std::unordered_map<char, int> counts;
+            for (int seq=0;seq<seqs.size();seq++) {
+                //Check if this is in the alphabet
+                int check=CheckAlphabet(alphabet,seqs[seq][pos]);
+                if (check==1) {
+                    counts[seqs[seq][pos]]++;
+                }
+            }
+            char most_common = 0;
+            int max_count = 0;
+            for (auto &[c, count] : counts) {
+                if (count > max_count) {
+                    max_count = count;
+                    most_common = c;
+                }
+            }
+            consensus[pos]=most_common;
+        }
+    }
+}
+
+int CheckAlphabet (vector<char>& alphabet, char a) {
+    int match=0;
+    auto it = find(alphabet.begin(), alphabet.end(), a);
+    if (it != alphabet.end()) {
+        match=1;
+    }
+    return match;
+}
+
+
+void FindSVariants (vector<sparseseq>& variants, string& consensus, vector<char>& alphabet, vector<string>& seqs) {
     for (int i=0;i<seqs.size();i++) {
         sparseseq s;
         for (int pos=0;pos<seqs[i].size();pos++) {
             if (seqs[i].compare(pos,1,consensus,pos,1)!=0) {
-                if (seqs[i].compare(pos,1,"A")==0||seqs[i].compare(pos,1,"C")==0||seqs[i].compare(pos,1,"G")==0||seqs[i].compare(pos,1,"T")==0) {
+                int check=CheckAlphabet(alphabet,seqs[i][pos]);
+                if (check==1) {
                     //cout << "Found variant " << pdat[i].code_match << " " << pos << " " << consensus[pos] << " " << seqs[i][pos] << "\n";
                     s.locus.push_back(pos);
                     s.allele.push_back(seqs[i][pos]);
@@ -165,7 +219,7 @@ void FindSVariants (vector<sparseseq>& variants, string& consensus, vector<strin
     }
 }
 
-void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, vector< vector<int> >& seqdists) {
+void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, vector<char>& alphabet, vector< vector<int> >& seqdists) {
     vector<int> zeros(seqs.size(),0);
     for (int i=0;i<seqs.size();i++) {
         seqdists.push_back(zeros);
@@ -184,11 +238,11 @@ void FindPairwiseDistances (vector<sparseseq>& variants, vector<string>& seqs, v
             sort(uniq.begin(),uniq.end());
             uniq.erase(unique(uniq.begin(),uniq.end()),uniq.end());
             for (int k=0;k<uniq.size();k++) {
-                if (seqs[i][uniq[k]]=='A'||seqs[i][uniq[k]]=='C'||seqs[i][uniq[k]]=='G'||seqs[i][uniq[k]]=='T') {
-                    if (seqs[j][uniq[k]]=='A'||seqs[j][uniq[k]]=='C'||seqs[j][uniq[k]]=='G'||seqs[j][uniq[k]]=='T') {
-                        if (seqs[i][uniq[k]]!=seqs[j][uniq[k]]) {
-                            dist++;
-                        }
+                int check1=CheckAlphabet(alphabet,seqs[i][uniq[k]]);
+                int check2=CheckAlphabet(alphabet,seqs[j][uniq[k]]);
+                if (check1==1&&check2==1) {
+                    if (seqs[i][uniq[k]]!=seqs[j][uniq[k]]) {
+                        dist++;
                     }
                 }
             }
@@ -320,20 +374,47 @@ void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats) {
     }
 }
 
-void FindVariants (vector<site>& ali_stats, vector<int>& var_positions) {
+
+void GetAliStats2 (const vector<string>& seqs, vector<char>& alphabet, vector<site2>& ali_stats) {
+    for (int i=0;i<seqs.size();i++) {
+        if (ali_stats.size()==0) {
+            for (int j=0;j<seqs[i].length();j++) {
+                site2 s;
+                for (int i=0;i<alphabet.size();i++) {
+                    s.counts.push_back(0);
+                }
+                for (int k=0;k<alphabet.size();k++) {
+                    if (seqs[i][j]==alphabet[k]) {
+                        s.counts[k]++;
+                        s.N++;
+                    }
+                }
+                ali_stats.push_back(s);
+            }
+        } else {
+            for (int j=0;j<seqs[i].length();j++) {
+               /* for (int i=0;i<alphabet.size();i++) {
+                    ali_stats[j].counts.push_back(0);
+                }*/
+                for (int k=0;k<alphabet.size();k++) {
+                    if (seqs[i][j]==alphabet[k]) {
+                        ali_stats[j].counts[k]++;
+                        ali_stats[j].N++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+void FindVariants (vector<site2>& ali_stats, vector<int>& var_positions) {
     for (int i=0;i<ali_stats.size();i++) {
         int count=0;
-        if (ali_stats[i].A>0) {
-            count++;
-        }
-        if (ali_stats[i].C>0) {
-            count++;
-        }
-        if (ali_stats[i].G>0) {
-            count++;
-        }
-        if (ali_stats[i].T>0) {
-            count++;
+        for (int j=0;j<ali_stats[i].counts.size();j++) {
+            if (ali_stats[i].counts[j]>0) {
+                count++;
+            }
         }
         if (count>1) {
             ali_stats[i].variant=1;
@@ -368,31 +449,47 @@ void GetConsensus (vector<site>& ali_stats, vector<string>& consensus) {
     cons_file << "\n";
 }
 
-void CalculateFrequencies (vector<site>& ali_stats, vector<string>& second) {
+void GetConsensus2 (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& consensus) {
+    ofstream cons_file;
+    cons_file.open("Alignment_consensus.fa");
+    cons_file << ">Alignment_consensus\n";
+    for (int i=0;i<ali_stats.size();i++) {
+        string cons="N";
+        int max=0;
+        for (int j=0;j<alphabet.size();j++) {
+            if (ali_stats[i].counts[j]>max) {
+                max=ali_stats[i].counts[j];
+                cons=alphabet[j];
+            }
+        }
+        cons_file << cons;
+        consensus.push_back(cons);
+    }
+    cons_file << "\n";
+}
+
+
+void CalculateFrequencies (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& second) {
+    int index=alphabet.size();
     for (int i=0;i<ali_stats.size();i++) {
         if (ali_stats[i].variant==1) {
             vector<double> c;
-            c.push_back(ali_stats[i].A);
-            c.push_back(ali_stats[i].C);
-            c.push_back(ali_stats[i].G);
-            c.push_back(ali_stats[i].T);
-            sort(c.begin(),c.end());
-            if (c[2]==ali_stats[i].A) {
-                second[i]="A";
+            for (int j=0;j<ali_stats[i].counts.size();j++) {
+                c.push_back(ali_stats[i].counts[j]);
             }
-            if (c[2]==ali_stats[i].C) {
-                second[i]="C";
-            }
-            if (c[2]==ali_stats[i].G) {
-                second[i]="G";
-            }
-            if (c[2]==ali_stats[i].T) {
-                second[i]="T";
+            sort(c.begin(),c.end()); //c[0] is the smallest
+            for (int j=0;j<ali_stats[i].counts.size();j++) {
+                if (c[index-2]==ali_stats[i].counts[j]) {
+                    second[i]=alphabet[j];
+                }
             }
 
-            ali_stats[i].freq=c[2]/(c[2]+c[3]);
-            cout << ali_stats[i].A << " " << ali_stats[i].C << " " << ali_stats[i].G << " " << ali_stats[i].T << " " << second[i] << " " << ali_stats[i].freq << "\n";
-
+            ali_stats[i].freq=c[index-2]/(c[index-2]+c[index-1]);
+            for (int j=0;j<ali_stats[i].counts.size();j++) {
+                cout << ali_stats[i].counts[j] << " ";
+            }
+            cout << second[i] << " " << ali_stats[i].freq << "\n";
+            
         }
     }
 }

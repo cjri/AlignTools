@@ -9,6 +9,7 @@
 void ReadFastaAli (run_params& p, vector<string>& seqs, vector<string>& names) {
     ifstream ali_file;
     ali_file.open(p.ali_file.c_str());
+    cout << "Read data from " << p.ali_file << "\n";
     string seq;
     string str;
     while (getline(ali_file, str)) {
@@ -371,7 +372,7 @@ void EditDenovo (vector< vector<int> >& denovo) {
     denovo=dn_new;
 }
             
-void OutputNucleotideCountsTime (run_params& p, vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site> >& ali_stats_t)  {
+void OutputNucleotideCountsTime (run_params& p, vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site2> >& ali_stats_t)  {
     ofstream nct_file;
     nct_file.open("Variant_trajectories.out");
     for (int i=0;i<var_positions.size();i++) { //All variants from all times
@@ -385,7 +386,11 @@ void OutputNucleotideCountsTime (run_params& p, vector<string>& consensus, vecto
         if (include>=p.n_reps) {
             nct_file << var_positions[i] << " " << consensus[var_positions[i]] << " " << second[var_positions[i]] << " ";
             for (int t=0;t<times_uniq.size();t++) {
-                nct_file << times_uniq[t] << " " << ali_stats_t[t][var_positions[i]].A << " " << ali_stats_t[t][var_positions[i]].C << " " << ali_stats_t[t][var_positions[i]].G << " " << ali_stats_t[t][var_positions[i]].T << " " << ali_stats_t[t][var_positions[i]].N << " ";
+                nct_file << times_uniq[t] << " ";
+                for (int k=0;k<ali_stats_t[t][var_positions[i]].counts.size();k++) {
+                    nct_file << ali_stats_t[t][var_positions[i]].counts[k] << " ";
+                }
+                nct_file << ali_stats_t[t][var_positions[i]].N << " ";
             }
             nct_file << "\n";
         }

@@ -5,9 +5,9 @@
 #include <string>
 #include <cstring>
 
-void GetPiDiversity (run_params& p, int seq_length, vector<string>& seqs, vector<string>& names) {
+void GetPiDiversity (run_params& p, int seq_length, vector<char>& alphabet, vector<string>& seqs, vector<string>& names) {
         vector< vector<int> > seqdists;
-        MakeDistanceMatrix (p,0,seqs,names,seqdists);
+        MakeDistanceMatrix (p,0,alphabet,seqs,names,seqdists);
         double tot=0;
         double c=0;
         for (int i=0;i<seqdists.size();i++) {

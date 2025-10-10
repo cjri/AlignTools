@@ -1,5 +1,5 @@
 CC              = g++
-CC_FLAGS        = -g3 -O3 -Wall -D_GLIBCXX_DEBUG -I  /opt/homebrew/Cellar/gsl/2.8/include/ -I/opt/homebrew/opt/eigen/include/eigen3/
+CC_FLAGS        = -g3 -O3 -Wall -std=c++17 -D_GLIBCXX_DEBUG -I  /opt/homebrew/Cellar/gsl/2.8/include/ -I/opt/homebrew/opt/eigen/include/eigen3/
 LD_FLAGS        = -L/opt/homebrew/Cellar/gsl/2.8/lib  -lgsl -lgslcblas -lm -lstdc++ 
 REC_OBJECTS	= aligntools.o utilities.o io.o distance_matrix.o diversity.o editing.o timesplit.o rgen.o
 

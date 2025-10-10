@@ -5,14 +5,14 @@
 #include <string>
 #include <cstring>
 
-void MakeDistanceMatrix (run_params& p, int output, vector<string>& seqs, vector<string>& names, vector< vector<int> >& seqdists) {
+void MakeDistanceMatrix (run_params& p, int output, vector<char>& alphabet, vector<string>& seqs, vector<string>& names, vector< vector<int> >& seqdists) {
     string all_consensus;
-    FindConsensus(all_consensus,seqs);
+    FindConsensus2(all_consensus,alphabet,seqs);
     vector<sparseseq> variants;
-    FindSVariants (variants,all_consensus,seqs);
+    FindSVariants (variants,all_consensus,alphabet,seqs);
     //Thought: Do we want to check for ambiguous nucleotides.  Currently no.
     
-    FindPairwiseDistances (variants,seqs,seqdists);
+    FindPairwiseDistances (variants,seqs,alphabet,seqdists);
     
     if (output==1) {
         ofstream pair_file;

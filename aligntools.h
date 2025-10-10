@@ -37,6 +37,7 @@ struct run_params {
     int n_cut; //Depth cutoff to print variants
     int n_reps; //Number of times variant observed
     int denovo; //Add de novo variants to randomly-generated sequences
+    int type; //Flag 1 for protein rather than nucleotide
     int error; //Error flag
 };
 
@@ -61,6 +62,14 @@ struct site {
     int variant; //Flag for variation at this site
     double freq; //Frequency of minor variant
 };
+
+struct site2 {
+    vector<int> counts;
+    int N;
+    int variant; //Flag for variation at this site
+    double freq; //Frequency of minor variant
+};
+
 
 struct pr {
     int i;

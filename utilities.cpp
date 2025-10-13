@@ -95,32 +95,39 @@ void CheckBaseCase (vector<string>& seqs) {
 
 void GetAlignmentType (run_params& p, vector<char>& alphabet, vector<string>& seqs) {
     //Uses first sequence.  Protein or nucleotide
-    vector<char> nucs = {'A','C','G','T'};
-    vector<char> nuc_chars = {'A','C','G','T','U','N','R','Y','S','W','K','M','B','D','H','V'};
+    vector<char> nuc_chars = {'A','C','G','T'};
     vector<char> aa_chars = {'A','C','D','E','F','G','H','I','L','K','M','N','P','Q','R','S','T','V','W','Y'};
     double nuc_count = 0;
     double aa_count  = 0;
+    double valid_count = 0;
     for (int i=0;i<seqs[0].size();i++) {
+        int to_add=0;
         char charToFind = seqs[0][i];
         auto it1 = std::find(nuc_chars.begin(), nuc_chars.end(), charToFind);
         auto it2 = std::find(aa_chars.begin(), aa_chars.end(), charToFind);
         if (it1 != nuc_chars.end()) {
             nuc_count++;
+            to_add=1;
         }
         if (it2 != aa_chars.end()) {
             aa_count++;
+            to_add=1;
+        }
+        if (to_add==1) {
+            valid_count++;
         }
     }
-    if (aa_count>nuc_count) {
+    if (nuc_count>(0.85*valid_count)) {
+        p.type=0;
+        alphabet=nuc_chars;
+    } else {
         p.type=1;
         alphabet=aa_chars;
-    } else {
-        alphabet=nucs;
     }
     cout << "Type " << p.type << "\n";
 }
 
-void FindConsensus (string& consensus, vector<string>& seqs) {
+/*void FindConsensus (string& consensus, vector<string>& seqs) {
     consensus=seqs[0];
     if (seqs.size()>1) {
         int nA=0;
@@ -165,7 +172,7 @@ void FindConsensus (string& consensus, vector<string>& seqs) {
             }
         }
     }
-}
+}*/
 
 void FindConsensus2 (string& consensus, vector<char>& alphabet, vector<string>& seqs) {
     consensus=seqs[0];
@@ -323,7 +330,7 @@ void FindDistanceSubsetsIJ(int cut, const vector< vector<int> >& seqdists, vecto
 }
 
 
-void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats) {
+/*void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats) {
     for (int i=0;i<seqs.size();i++) {
         if (ali_stats.size()==0) {
             for (int j=0;j<seqs[i].length();j++) {
@@ -372,7 +379,7 @@ void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats) {
             }
         }
     }
-}
+}*/
 
 
 void GetAliStats2 (const vector<string>& seqs, vector<char>& alphabet, vector<site2>& ali_stats) {
@@ -425,7 +432,7 @@ void FindVariants (vector<site2>& ali_stats, vector<int>& var_positions) {
     }
 }
 
-void GetConsensus (vector<site>& ali_stats, vector<string>& consensus) {
+/*void GetConsensus (vector<site>& ali_stats, vector<string>& consensus) {
     ofstream cons_file;
     cons_file.open("Alignment_consensus.fa");
     cons_file << ">Alignment_consensus\n";
@@ -447,7 +454,7 @@ void GetConsensus (vector<site>& ali_stats, vector<string>& consensus) {
         consensus.push_back(cons);
     }
     cons_file << "\n";
-}
+}*/
 
 void GetConsensus2 (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& consensus) {
     ofstream cons_file;
@@ -545,7 +552,7 @@ void ConstructPairs (run_params p, const vector<string>& second, vector<pr>& pai
 }
 
 
-void FindCorrelations (vector<site>& ali_stats, vector<pr>& pairs) {
+void FindCorrelations (vector<site2>& ali_stats, vector<pr>& pairs) {
     for (int i=0;i<pairs.size();i++) {
         double top=pairs[i].c00*(-ali_stats[pairs[i].i].freq)*(-ali_stats[pairs[i].j].freq);
         top=top+pairs[i].c01*(-ali_stats[pairs[i].i].freq)*(1-ali_stats[pairs[i].j].freq);

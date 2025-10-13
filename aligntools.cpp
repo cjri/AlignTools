@@ -59,7 +59,7 @@ int main(int argc, const char **argv){
 
     
     //Get alignment statistics
-    vector<site> ali_stats;
+    //vector<site> ali_stats;
     vector<site2> ali_stats2;
     GetAliStats2 (seqs,alphabet,ali_stats2);
     
@@ -94,7 +94,7 @@ int main(int argc, const char **argv){
     
     if (p.method.compare("Random")==0) {
         //To update
-        GenerateRandomSequences (p,seq_length,consensus,var_positions,ali_stats,seqs,rgen);
+        GenerateRandomSequences (p,seq_length,consensus,alphabet,var_positions,ali_stats2,seqs,rgen);
         
     } else if (p.method.compare("TimedFreqs")==0) {
         //Updated
@@ -105,7 +105,7 @@ int main(int argc, const char **argv){
         }
         
     } else if (p.method.compare("TimeSplit")==0) {
-        TDSplit (p,consensus,var_positions,ali_stats,names,seqs);
+        TDSplit (p,consensus,var_positions,ali_stats2,names,seqs);
         
         
     } else {

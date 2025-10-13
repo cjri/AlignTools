@@ -10,9 +10,9 @@
 
 using namespace Eigen;
 
-void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& seqs,gsl_rng *rgen) {
+void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& consensus, vector<char>& alphabet, vector<int>& var_positions, vector<site2>& ali_stats, vector<string>& seqs,gsl_rng *rgen) {
     vector<string> second=consensus;
-    CalculateFrequencies (ali_stats,second);
+    CalculateFrequencies (ali_stats,alphabet,second);
     
     if (p.verb==1) {
         PrintVariantPositions (var_positions,consensus,second);
@@ -49,7 +49,7 @@ void GenerateRandomSequences (run_params& p, int seq_length, vector<string>& con
 
 }
 
-void ExtractFrequencies (run_params& p, vector<int>& var_positions, vector<site>& ali_stats, vector<double>& frequencies) {
+void ExtractFrequencies (run_params& p, vector<int>& var_positions, vector<site2>& ali_stats, vector<double>& frequencies) {
     if (p.get_frequencies==1) {
         for (int i=0;i<var_positions.size();i++) {
             frequencies.push_back(ali_stats[var_positions[i]].freq);
@@ -60,7 +60,7 @@ void ExtractFrequencies (run_params& p, vector<int>& var_positions, vector<site>
     }
 }
 
-void ExtractCorrelations (run_params& p, vector<int>& var_positions, vector<string>& second, vector<site>& ali_stats, vector<pr>& pairs, vector< vector<double> >& correls) {
+void ExtractCorrelations (run_params& p, vector<int>& var_positions, vector<string>& second, vector<site2>& ali_stats, vector<pr>& pairs, vector< vector<double> >& correls) {
     if (p.get_correlations==1) {
         MakeInitialPairs (var_positions,pairs);
         ConstructPairs (p,second,pairs);

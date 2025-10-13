@@ -53,7 +53,7 @@ struct sparseseq {
     vector<char> allele;
 };
 
-struct site {
+/*struct site {
     int A;
     int C;
     int G;
@@ -61,7 +61,7 @@ struct site {
     int N;
     int variant; //Flag for variation at this site
     double freq; //Frequency of minor variant
-};
+};*/
 
 struct site2 {
     vector<int> counts;

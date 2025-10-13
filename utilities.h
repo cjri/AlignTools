@@ -13,19 +13,19 @@ void FindDistanceSubsetsIJ(int cut, const vector< vector<int> >& seqdists, vecto
 
 
 
-void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats);
+//void GetAliStats (const vector<string>& seqs,vector<site>& ali_stats);
 void GetAliStats2 (const vector<string>& seqs, vector<char>& alphabet, vector<site2>& ali_stats);
 
 
 void FindVariants (vector<site2>& ali_stats, vector<int>& var_positions);
-void GetConsensus (vector<site>& ali_stats, vector<string>& consensus);
+//void GetConsensus (vector<site>& ali_stats, vector<string>& consensus);
 void GetConsensus2 (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& consensus);
 
 void CalculateFrequencies (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& second);
 
 void MakeInitialPairs (vector<int>& var_positions, vector<pr>& pairs);
 void ConstructPairs (run_params p, const vector<string>& second, vector<pr>& pairs);
-void FindCorrelations (vector<site>& ali_stats, vector<pr>& pairs);
+void FindCorrelations (vector<site2>& ali_stats, vector<pr>& pairs);
 
 void FindIdentical (const vector<int>& var_positions, const vector< vector<double> >& correls, vector< vector<int> >& ident);
 

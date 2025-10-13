@@ -397,7 +397,7 @@ void OutputNucleotideCountsTime (run_params& p, vector<string>& consensus, vecto
     }
 }
 
-void OutputVariantFrequencies (vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site> >& ali_stats_t)  {
+void OutputVariantFrequencies (vector<string>& consensus, vector<string>& second, const vector<int> times_uniq, const vector<int>& var_positions, const vector< vector<site2> >& ali_stats_t)  {
     ofstream ncf_file;
     ncf_file.open("Variant_frequencies.out");
     for (int i=0;i<var_positions.size();i++) { //All variants from all times

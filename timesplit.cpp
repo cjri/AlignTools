@@ -67,7 +67,7 @@ void GetTimeVariants (const vector<int>& times_uniq, vector< vector<site2> >& al
     }
 }
 
-void TDSplit (run_params& p, vector<string>& consensus, vector<int>& var_positions, vector<site>& ali_stats, vector<string>& names, vector<string>& seqs) {
+void TDSplit (run_params& p, vector<string>& consensus, vector<int>& var_positions, vector<site2>& ali_stats, vector<string>& names, vector<string>& seqs) {
     vector<int> times;
     vector<int> times_uniq;
     ReadTimes(times,times_uniq);
@@ -88,8 +88,6 @@ void TDSplit (run_params& p, vector<string>& consensus, vector<int>& var_positio
             time_file << seqs_t[i][j] << "\n";
         }
         time_file.close();
-        
-        
     }
 }
 

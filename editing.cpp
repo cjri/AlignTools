@@ -42,7 +42,6 @@ void FilterPDiff (run_params& p, vector<string>& seqs, vector<string>& names, ve
     //cout << variants.size() << "\n";
     //cout << "Length " << seqs[0].length() << "\n";
     
-    p.qq_cut=0.01;
     int threshold=seqs[0].length()*p.qq_cut;
     //Keep track of sequences
     vector<int> done;
@@ -111,13 +110,6 @@ void FilterPDiff (run_params& p, vector<string>& seqs, vector<string>& names, ve
     sort(sample.begin(),sample.end());
     sample.erase(unique(sample.begin(),sample.end()),sample.end());
 
-    /*cout << "Sample\n";
-    for (int i=0;i<sample.size();i++) {
-        cout << sample[i] << " ";
-    }
-    cout << "\n";*/
     OutputAlignmentSFiltered (names,seqs,sample);
-    
-    
 
 }

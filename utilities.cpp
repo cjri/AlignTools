@@ -19,7 +19,7 @@ void GetParameters (run_params& p, int argc, const char **argv) {
     p.get_correlations=1;
     p.n_generations=0;
     p.cutoff=0.0;
-    p.qq_cut=0.1;
+    p.qq_cut=0.01;
     p.n_cut=10;
     p.n_reps=1;
     p.denovo=0;
@@ -98,7 +98,7 @@ void GetAlignmentType (run_params& p, vector<char>& alphabet, vector<string>& se
     vector<char> nuc_chars = {'A','C','G','T'};
     vector<char> aa_chars = {'A','C','D','E','F','G','H','I','L','K','M','N','P','Q','R','S','T','V','W','Y'};
     double nuc_count = 0;
-    double aa_count  = 0;
+    //double aa_count  = 0;
     double valid_count = 0;
     for (int i=0;i<seqs[0].size();i++) {
         int to_add=0;
@@ -110,7 +110,7 @@ void GetAlignmentType (run_params& p, vector<char>& alphabet, vector<string>& se
             to_add=1;
         }
         if (it2 != aa_chars.end()) {
-            aa_count++;
+            //aa_count++;
             to_add=1;
         }
         if (to_add==1) {
@@ -124,7 +124,12 @@ void GetAlignmentType (run_params& p, vector<char>& alphabet, vector<string>& se
         p.type=1;
         alphabet=aa_chars;
     }
-    cout << "Type " << p.type << "\n";
+    if (p.type==0) {
+        cout << "Detected nucleotide alignment\n";
+    }
+    if (p.type==1) {
+        cout << "Detected amino acid alignment\n";
+    }
 }
 
 /*void FindConsensus (string& consensus, vector<string>& seqs) {
@@ -382,11 +387,15 @@ void FindDistanceSubsetsIJ(int cut, const vector< vector<int> >& seqdists, vecto
 }*/
 
 
-void GetAliStats2 (const vector<string>& seqs, vector<char>& alphabet, vector<site2>& ali_stats) {
+void GetAliStats2 (run_params& p, const vector<string>& seqs, vector<char>& alphabet, vector<site2>& ali_stats) {
+    if (p.verb==1) {
+        cout << "Getting alignment statistics\n";
+    }
     for (int i=0;i<seqs.size();i++) {
         if (ali_stats.size()==0) {
             for (int j=0;j<seqs[i].length();j++) {
                 site2 s;
+                s.N=0;
                 for (int i=0;i<alphabet.size();i++) {
                     s.counts.push_back(0);
                 }
@@ -400,9 +409,6 @@ void GetAliStats2 (const vector<string>& seqs, vector<char>& alphabet, vector<si
             }
         } else {
             for (int j=0;j<seqs[i].length();j++) {
-               /* for (int i=0;i<alphabet.size();i++) {
-                    ali_stats[j].counts.push_back(0);
-                }*/
                 for (int k=0;k<alphabet.size();k++) {
                     if (seqs[i][j]==alphabet[k]) {
                         ali_stats[j].counts[k]++;
@@ -476,8 +482,11 @@ void GetConsensus2 (vector<site2>& ali_stats, vector<char>& alphabet, vector<str
 }
 
 
-void CalculateFrequencies (vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& second) {
+void CalculateFrequencies (run_params& p, vector<site2>& ali_stats, vector<char>& alphabet, vector<string>& second) {
     int index=alphabet.size();
+    if (p.verb==1) {
+        cout << "Frequencies\n";
+    }
     for (int i=0;i<ali_stats.size();i++) {
         if (ali_stats[i].variant==1) {
             vector<double> c;
@@ -492,11 +501,13 @@ void CalculateFrequencies (vector<site2>& ali_stats, vector<char>& alphabet, vec
             }
 
             ali_stats[i].freq=c[index-2]/(c[index-2]+c[index-1]);
-            for (int j=0;j<ali_stats[i].counts.size();j++) {
-                cout << ali_stats[i].counts[j] << " ";
+            if (p.verb==1) {
+                cout << i << " ";
+                for (int j=0;j<ali_stats[i].counts.size();j++) {
+                    cout << ali_stats[i].counts[j] << " ";
+                }
+                cout << second[i] << " " << ali_stats[i].freq << "\n";
             }
-            cout << second[i] << " " << ali_stats[i].freq << "\n";
-            
         }
     }
 }
@@ -553,6 +564,7 @@ void ConstructPairs (run_params p, const vector<string>& second, vector<pr>& pai
 
 
 void FindCorrelations (vector<site2>& ali_stats, vector<pr>& pairs) {
+    cout << "Find correlations\n";
     for (int i=0;i<pairs.size();i++) {
         double top=pairs[i].c00*(-ali_stats[pairs[i].i].freq)*(-ali_stats[pairs[i].j].freq);
         top=top+pairs[i].c01*(-ali_stats[pairs[i].i].freq)*(1-ali_stats[pairs[i].j].freq);
@@ -567,6 +579,7 @@ void FindCorrelations (vector<site2>& ali_stats, vector<pr>& pairs) {
         double b=b1*b2;
         b=sqrt(b);
         pairs[i].correl=(top+0.)/(b+0.);
+        cout << pairs[i].c11 << " " << pairs[i].c10 << " " << pairs[i].c01 << " " << pairs[i].c00 << " " << top << " " << b << " " << pairs[i].correl << "\n";
     }
 }
 

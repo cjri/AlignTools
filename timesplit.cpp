@@ -19,20 +19,20 @@ void GetTDNucleotideCounts (run_params& p, vector<string>& consensus, vector<cha
     
     //Alignment statistics
     vector< vector<site2> > ali_stats_t;
-    SplitAliStats (times_uniq,alphabet,seqs_t,ali_stats_t);
+    SplitAliStats (p,times_uniq,alphabet,seqs_t,ali_stats_t);
     
     //Time-dependent variant frequencies
-    GetTimeVariants (times_uniq,ali_stats_t);
+    GetTimeVariants (times_uniq,ali_stats_t);  //NB Does this actually return anything?  Yes, modified ali_stats_t[i].  To here...
     
     vector<string> second=consensus;
-    CalculateFrequencies (ali_stats,alphabet,second);
+    CalculateFrequencies (p,ali_stats,alphabet,second);
 
     for (int i=0;i<times_uniq.size();i++) {
         vector<string> temp=consensus;
         for (int j=0;j<ali_stats_t[i].size();j++) {
             ali_stats_t[i][j].freq=0;
         }
-        CalculateFrequencies (ali_stats_t[i],alphabet,temp);
+        CalculateFrequencies (p,ali_stats_t[i],alphabet,temp);
     }
     
     //Go through the frequencies of each variant with time
@@ -52,10 +52,10 @@ void SplitSeqs (const vector<int>& times, const vector<int>& times_uniq, const v
     }
 }
 
-void SplitAliStats (const vector<int>& times_uniq, vector<char>& alphabet, const vector< vector<string> >& seqs_t, vector< vector<site2> >& ali_stats_t) {
+void SplitAliStats (run_params& p, const vector<int>& times_uniq, vector<char>& alphabet, const vector< vector<string> >& seqs_t, vector< vector<site2> >& ali_stats_t) {
     for (int i=0;i<times_uniq.size();i++) {
         vector<site2> a;
-        GetAliStats2 (seqs_t[i],alphabet,a);
+        GetAliStats2 (p,seqs_t[i],alphabet,a);
         ali_stats_t.push_back(a);
     }
 }

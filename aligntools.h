@@ -74,6 +74,8 @@ struct site2 {
 struct pr {
     int i;
     int j;
+    int d0; //Flag for deletion
+    int d1; //Flag for deletion
     int c00;
     int c01;
     int c10;

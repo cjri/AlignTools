@@ -45,6 +45,20 @@ void ReadTimes (vector<int>& times, vector<int>& times_uniq) {
     times_uniq.erase(unique(times_uniq.begin(),times_uniq.end()),times_uniq.end());
 }
 
+void ReadStrings (vector<string>& strings, vector<string>& strings_unique) {
+    ifstream s_file;
+    s_file.open("Strings.in");
+    string s;
+    for (int i=0;i<1000000;i++) {
+        if (!(s_file >> s)) break;
+        strings.push_back(s);
+    }
+    strings_unique=strings;
+    sort(strings_unique.begin(),strings_unique.end());
+    strings_unique.erase(unique(strings_unique.begin(),strings_unique.end()),strings_unique.end());
+}
+
+
 void PrintVariantPositions (vector<int>& var_positions, vector<string>& consensus, vector<string>& second) {
     ofstream vars_file;
     vars_file.open("Variant_positions.out");
@@ -73,20 +87,254 @@ void PrintCorrelations (vector< vector<double> >& correls) {
     }
 }
 
-void OutputBitstrings (run_params& p, vector< vector<int> >& bitstrings, const vector<int>& var_positions, const vector<string>& consensus, const vector<string>& second, vector<delet> deletions, vector< vector<int> >& denovo) {
+void OutputBitstrings (run_params& p, vector< vector<int> >& bitstrings, const vector<int>& var_positions, const vector<string>& consensus, const vector<string>& second, vector<char>& alphabet, vector<int>& conf_variants, vector<delet>& deletions, vector< vector<int> >& denovo) {
+    
+    //Make vector of actual deletion indices
+    vector< vector<int> > actual_del;
+    GetActualDeletions (p,conf_variants,deletions,bitstrings,actual_del);
+    
+    //Make edited bitstrings with no deletions
+    MakeBitstringsNoDel(conf_variants,bitstrings);
+    
     if (p.output.compare("Sparse")==0) {
-        OutputBitstringsSparse(var_positions,deletions,bitstrings,denovo);
+        OutputBitstringsSparse(p,var_positions,consensus,second,alphabet,deletions,actual_del,bitstrings,denovo);
     }
     if (p.output.compare("FASTA")==0) {
-        OutputBitstringsFasta(var_positions,consensus,second,deletions,bitstrings,denovo);
+        OutputBitstringsFasta(p,var_positions,consensus,second,alphabet,deletions,actual_del,bitstrings,denovo);
     }
-    if (p.output.compare("Binary")==0) {
-        OutputBitstringsBinary(var_positions,deletions,bitstrings,denovo);
+}
+
+void GetActualDeletions (run_params& p, vector<int>& conf_variants, vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& actual_del) {
+    if (p.verb==1) {
+        for (int i=0;i<bitstrings.size();i++) {
+            cout << "String " << i << " ";
+            vector<int> ad;
+            for (int j=conf_variants.size();j<conf_variants.size()+deletions.size();j++) {
+                if (bitstrings[i][j]==1) {
+                    ad.push_back(j-conf_variants.size());
+                    cout << "del " << j-conf_variants.size() << " ";
+                }
+            }
+            actual_del.push_back(ad);
+            cout << "\n";
+        }
+    } else {
+        for (int i=0;i<bitstrings.size();i++) {
+            vector<int> ad;
+            for (int j=conf_variants.size();j<conf_variants.size()+deletions.size();j++) {
+                if (bitstrings[i][j]==1) {
+                    ad.push_back(j-conf_variants.size());
+                }
+            }
+            actual_del.push_back(ad);
+        }
+    }
+}
+
+void MakeBitstringsNoDel (vector<int>& conf_variants, vector< vector<int> >& bitstrings) {
+    vector< vector<int> > bitstrings_new;
+    for (int i=0;i<bitstrings.size();i++) {
+        vector<int> bstring;
+        for (int j=0;j<conf_variants.size();j++) {
+            bstring.push_back(bitstrings[i][j]);
+        }
+        bitstrings_new.push_back(bstring);
+    }
+    bitstrings=bitstrings_new;
+}
+
+void OutputBitstringsFasta (run_params& p, const vector<int>& var_positions, const vector<string>& consensus, const vector<string>& second, vector<char>& alphabet, const vector<delet>& deletions, vector< vector<int> >& actual_del, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
+
+    //Replace deletions by negative 1: Flag for a '-'
+    for (int i=0;i<bitstrings.size();i++) {
+        for (int j=0;j<actual_del[i].size();j++) {
+            //Variant positions
+            for (int v=0;v<var_positions.size();v++) {
+                for (int k=deletions[actual_del[i][j]].start;k<deletions[actual_del[i][j]].start+deletions[actual_del[i][j]].length;k++) {
+                    if (var_positions[v]==k) {
+                        bitstrings[i][v]=-1;
+                    }
+                }
+            }
+            //Denovo mutations
+            for (int v=0;v<denovo[i].size();v++) {
+                for (int k=deletions[actual_del[i][j]].start;k<deletions[actual_del[i][j]].start+deletions[actual_del[i][j]].length;k++) {
+                    if (denovo[i][v]==k) {
+                        denovo[i][v]=-1;
+                    }
+                }
+            }
+        }
+    }
+
+    //Remove denovo mutations that have been deleted
+    EditDenovo(denovo);
+    
+    //Generate list of de novo positions
+    vector<int> all_denovo;
+    GetDenovoSites (denovo,all_denovo);
+    if (p.verb==1) {
+        cout << "All denovo size " << all_denovo.size() << "\n";
+        cout << "Var_positions size " << var_positions.size() << "\n";
+    }
+    
+    //Print the sequence
+    for (int i=0;i<bitstrings.size();i++) {
+        int indexb=0;
+        int indexd=0;
+        int indexs=0;
+        cout << ">Sample" << i+1 << "\n";
+        while (indexb<var_positions.size()||indexd<all_denovo.size()) {
+            int min=100000;
+            int fromb=0;
+            if (indexb<var_positions.size()&&var_positions[indexb]<min) {
+                min=var_positions[indexb];
+                fromb=1;
+            }
+            if (indexd<all_denovo.size()&&all_denovo[indexd]<min) {
+                min=all_denovo[indexd];
+                fromb=0;
+            }
+            while (indexs<min) {
+                //Check position for deletion
+                int del=0;
+                for (int j=0;j<actual_del[i].size();j++) {
+                    if (indexs>=deletions[actual_del[i][j]].start&&indexs<deletions[actual_del[i][j]].start+deletions[actual_del[i][j]].length) {
+                        del=1;
+                    }
+                }
+                if (del==1) {
+                    cout << "-";
+                } else {
+                    cout << consensus[indexs];
+                }
+                indexs++;
+            }
+            
+            if (fromb==1) {
+                if (bitstrings[i][indexb]==0) {
+                    cout << consensus[indexs];
+                } else if (bitstrings[i][indexb]==-1) {
+                    cout << "-";
+                } else {
+                    cout << second[indexs];
+                }
+                indexs++;
+                indexb++;
+            } else {
+                int found=0;
+                for (int j=0;j<denovo[i].size();j++) {
+                    if (denovo[i][j]==all_denovo[indexd]) {
+                        found=1;
+                        break;
+                    }
+                }
+                if (found==0) {
+                    cout << consensus[indexs];
+                } else {
+                    PrintNextCharacter (indexs,consensus,alphabet);
+                }
+                indexs++;
+                indexd++;
+            }
+        }
+        cout << "\n";
     }
     
 }
 
-void OutputBitstringsBinary (const vector<int>& var_positions, const vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
+void PrintNextCharacter (int& indexs, const vector<string>& consensus, vector<char>& alphabet) {
+    int c=0;
+    for (int j=0;j<alphabet.size();j++) {
+        if (consensus[indexs][0]==alphabet[j]) {
+            c=j;
+        }
+    }
+    if (c==alphabet.size()-1) {
+        c=-1;
+    }
+    cout << alphabet[c+1];
+}
+
+void OutputBitstringsSparse (run_params& p, const vector<int>& var_positions, const vector<string>& consensus, const vector<string>& second, vector<char>& alphabet, const vector<delet>& deletions, vector< vector<int> >& actual_del, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
+
+    //Replace deletions by negative 1: Flag for a '-'
+    for (int i=0;i<bitstrings.size();i++) {
+        for (int j=0;j<actual_del[i].size();j++) {
+            //Variant positions
+            for (int v=0;v<var_positions.size();v++) {
+                for (int k=deletions[actual_del[i][j]].start;k<deletions[actual_del[i][j]].start+deletions[actual_del[i][j]].length;k++) {
+                    if (var_positions[v]==k) {
+                        bitstrings[i][v]=-1;
+                    }
+                }
+            }
+            //Denovo mutations
+            for (int v=0;v<denovo[i].size();v++) {
+                for (int k=deletions[actual_del[i][j]].start;k<deletions[actual_del[i][j]].start+deletions[actual_del[i][j]].length;k++) {
+                    if (denovo[i][v]==k) {
+                        denovo[i][v]=-1;
+                    }
+                }
+            }
+        }
+    }
+
+    //Remove denovo mutations that have been deleted
+    EditDenovo(denovo);
+    
+    //Generate list of de novo positions
+    vector<int> all_denovo;
+    GetDenovoSites (denovo,all_denovo);
+    if (p.verb==1) {
+        cout << "All denovo size " << all_denovo.size() << "\n";
+        cout << "Var_positions size " << var_positions.size() << "\n";
+    }
+    
+    //Print the sequence
+    for (int i=0;i<bitstrings.size();i++) {
+        cout << "Sample " << i+1 << " ";
+        int indexb=0;
+        int indexd=0;
+        while (indexb<var_positions.size()||indexd<all_denovo.size()) {
+            //Find the next value
+            int min=100000;
+            int fromb=0;
+            if (indexb<var_positions.size()&&var_positions[indexb]<min) {
+                min=var_positions[indexb];
+                fromb=1;
+            }
+            if (indexd<all_denovo.size()&&all_denovo[indexd]<min) {
+                min=all_denovo[indexd];
+                fromb=0;
+            }
+
+            if (fromb==1) {
+                if (bitstrings[i][indexb]==1) {
+                    cout << var_positions[indexb] << " ";
+                }
+                indexb++;
+            } else {
+                for (int j=0;j<denovo[i].size();j++) {
+                    if (denovo[i][j]==all_denovo[indexd]) {
+                        cout << all_denovo[indexd] << " ";
+                        break;
+                    }
+                }
+                indexd++;
+            }
+        }
+        cout << "\n";
+    }
+}
+
+
+
+
+
+
+
+/*void OutputBitstringsBinary (const vector<int>& var_positions, const vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
     //Replace deletions by zeros
     for (int d=0;d<deletions.size();d++) {
         for (int i=0;i<bitstrings.size();i++) {
@@ -145,7 +393,7 @@ void OutputBitstringsBinary (const vector<int>& var_positions, const vector<dele
         }
         cout << "\n";
     }
-}
+}*/
 
 void GetDenovoSites (vector< vector<int> >& denovo, vector<int>& all_denovo) {
     for (int i=0;i<denovo.size();i++) {
@@ -159,7 +407,7 @@ void GetDenovoSites (vector< vector<int> >& denovo, vector<int>& all_denovo) {
     }
 }
 
-void OutputSites (const vector<int>& var_positions, vector<int>& all_denovo, vector< vector<int> >& bitstrings) {
+/*void OutputSites (const vector<int>& var_positions, vector<int>& all_denovo, vector< vector<int> >& bitstrings) {
     cout << "Sites\n";
     int indexb=0;
     int indexd=0;
@@ -173,9 +421,9 @@ void OutputSites (const vector<int>& var_positions, vector<int>& all_denovo, vec
         }
     }
     cout << "\n";
-}
+}*/
 
-void OutputBitstringsSparse (const vector<int>& var_positions, const vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
+/*void OutputBitstringsSparse (const vector<int>& var_positions, const vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
     cout << "Sparse output\n";
     //Sparse variant format
     //Replace deletions by zeros
@@ -248,115 +496,8 @@ void OutputBitstringsSparse (const vector<int>& var_positions, const vector<dele
         }
         cout << "\n";
     }
-}
+}*/
 
-void OutputBitstringsFasta (const vector<int>& var_positions, const vector<string>& consensus, const vector<string>& second, const vector<delet>& deletions, vector< vector<int> >& bitstrings, vector< vector<int> >& denovo) {
-
-    //Replace deletions by negative 1: Flag for a '-'
-    for (int d=0;d<deletions.size();d++) {
-        for (int i=0;i<bitstrings.size();i++) {
-            random_device rd;
-            mt19937 gen(rd());
-            uniform_real_distribution<> dis(0.0, 1.0);
-            double r = dis(gen);
-            if (r<deletions[i].freq) {
-                for (int j=0;j<var_positions.size();j++) {
-                    for (int k=deletions[d].start;k<deletions[d].start+deletions[d].length;k++) {
-                        if (var_positions[j]==k) {
-                            bitstrings[i][j]=-1;
-                        }
-                    }
-                }
-            }
-            //Do the same for de novo mutations in this sequence
-            for (int j=0;j<denovo[i].size();j++) {
-                for (int k=deletions[d].start;k<deletions[d].start+deletions[d].length;k++) {
-                    if (denovo[i][j]==k) {
-                        denovo[i][j]=-1;
-                    }
-                }
-            }
-        }
-    }
-
-    //Remove negative denovo mutations
-    EditDenovo(denovo);
-    
-    //Insert de novo mutations
-    vector<int> all_denovo;
-    GetDenovoSites (denovo,all_denovo);
-
-    cout << "All denovo size " << all_denovo.size() << "\n";
-    
-    cout << "Var_positions size " << var_positions.size() << "\n";
-    
-    
-    
-    for (int i=0;i<bitstrings.size();i++) {
-        int indexb=0;
-        int indexd=0;
-        int indexs=0;
-        cout << ">Sample" << i+1 << "\n";
-        while (indexb<var_positions.size()||indexd<all_denovo.size()) {
-            int min=100000;
-            int fromb=0;
-            if (indexb<var_positions.size()&&var_positions[indexb]<min) {
-                min=var_positions[indexb];
-                fromb=1;
-            }
-            if (indexd<all_denovo.size()&&all_denovo[indexd]<min) {
-                min=all_denovo[indexd];
-                fromb=0;
-            }
-            while (indexs<min) {
-                cout << consensus[indexs];
-                indexs++;
-            }
-            
-            if (fromb==1) {
-                if (bitstrings[i][indexb]==0) {
-                    cout << consensus[indexs];
-                } else if (bitstrings[i][indexb]==-1) {
-                    cout << "-";
-                } else {
-                    cout << second[indexs];
-                }
-                indexs++;
-                indexb++;
-            } else {
-                int found=0;
-                for (int j=0;j<denovo[i].size();j++) {
-                    if (denovo[i][j]==all_denovo[indexd]) {
-                        found=1;
-                        break;
-                    }
-                }
-                if (found==0) {
-                    cout << consensus[indexs];
-                } else {
-                    //New denovo mutation
-                    if (consensus[indexs]=="A") {
-                        cout << "C";
-                    }
-                    if (consensus[indexs]=="C") {
-                        cout << "G";
-                    }
-                    if (consensus[indexs]=="G") {
-                        cout << "T";
-                    }
-                    if (consensus[indexs]=="T") {
-                        cout << "A";
-                    }
-                    
-                }
-                indexs++;
-                indexd++;
-            }
-        }
-        cout << "\n";
-    }
-    
-}
 
 void EditDenovo (vector< vector<int> >& denovo) {
     vector< vector<int> > dn_new;
@@ -440,5 +581,40 @@ void OutputAlignmentSFiltered (vector<string>& names, vector<string>& seqs, vect
             }
         }
         a_file << "\n";
+    }
+}
+
+void PrintDeletions (vector<delet>& deletions) {
+    cout << "Deletions\n";
+    for (int i=0;i<deletions.size();i++) {
+        cout << deletions[i].start << " " << deletions[i].length << " " << deletions[i].freq << "\n";
+    }
+}
+
+void PrintDelSites (vector<int>& delsites) {
+    cout << "Deleted sites\n";
+    for (int i=0;i<delsites.size();i++) {
+        cout << delsites[i] << " ";
+    }
+    cout << "\n";
+}
+
+void PrintConfVar (vector<int>& conf_variants, vector<double>& conf_frequencies) {
+    cout << "Confirmed variants\n";
+    for (int i=0;i<conf_variants.size();i++) {
+        cout << conf_variants[i] << " " << conf_frequencies[i] << "\n";
+    }
+}
+
+void PrintBitstrings (vector<int>& conf_variants, vector< vector<int> >& bitstrings) {
+    cout << "Generated bitstrings\n";
+    for (int i=0;i<bitstrings.size();i++) {
+        for (int j=0;j<bitstrings[0].size();j++) {
+            cout << bitstrings[i][j];
+            if (j==conf_variants.size()-1) {
+                cout << " ";
+            }
+        }
+        cout << "\n";
     }
 }

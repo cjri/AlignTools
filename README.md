@@ -50,7 +50,7 @@ Inupt: Requires the file Times.in, described above.
 The alignment is split into sequences representing each of the times specified by the input file.  
 
 
-
+[Work on README in progress.]
 
 
 

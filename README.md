@@ -2,8 +2,10 @@
 
 This repository contains software to generate statistics from multiple sequence alignments.
 
-Compilation: The code can be compiled with the command: make align
-Note: The Makefile may need to be edited for your specific system
+**Compilation: **
+
+The code can be compiled with the command: make align
+Note that the Makefile may need to be edited for your specific system
 
 This code uses the GSL and Eigen libraries.  On a Mac these can easily be installed using the homebrew package.
 

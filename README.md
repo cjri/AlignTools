@@ -88,9 +88,9 @@ _Options:_
 
 --output <type> [Default: Sparse] : Output format for random sequences:
 
-	Sparse: Outputs comprise nucleotide positions at which single nucleotide variants arise.  Deletions are not explicitly reported, though the locations of variants that fall in deletions are not reported.  This format was designed for sparse storage of potentially large numbers of sequences, generated from alignments of viral genomes, where indels are often rare.
+Sparse: Outputs comprise nucleotide positions at which single nucleotide variants arise.  Deletions are not explicitly reported, though the locations of variants that fall in deletions are not reported.  This format was designed for sparse storage of potentially large numbers of sequences, generated from alignments of viral genomes, where indels are often rare.
 
-	FASTA: Outputs comprise sequences in FASTA format.  Deletions are explicitly included in sequences.  The locations of variants is not reported, but could be derived from a comparison of sequences if needed.
+FASTA: Outputs comprise sequences in FASTA format.  Deletions are explicitly included in sequences.  The locations of variants is not reported, but could be derived from a comparison of sequences if needed.
 	
 
 

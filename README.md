@@ -5,6 +5,8 @@ This repository contains software to generate statistics from multiple sequence 
 Compilation: The code can be compiled with the command: make align
 Note: The Makefile may need to be edited for your specific system
 
+This code uses the GSL and Eigen libraries.  On a Mac these can easily be installed using the homebrew package.
+
 To run the code, use the executable
 
 ./run_align <Method> --ali_file <alignment file name> <Options>
@@ -56,7 +58,7 @@ _Outputs:_ Where the input file is AlignmentName.xxx, sequences corresponding to
 
 _Input:_ Requires the file Times.in, described above.
 
-The alignment is split into sequences representing each of the times specified by the input file Times.in.  Variant positions are identified in the alignment as a whole.  Next, variant frequencies are calculated for each of the time-specific alignments.
+The alignment is split into sequences representing each of the times specified by the input file Times.in.  Variant positions are identified in the alignment as a whole.  Next, single-nucleotide variant frequencies are calculated for each of the time-specific alignments.  Variants are derived relative to the consensus of the aligned sequences.
 
 Variant frequency information is then output.  We identify variants that appear at a frequency of at least q_cut in a time-specific alignment containing at least n_cut sequences.  
 
@@ -71,5 +73,24 @@ _Options:_
 --q_cut q [Default 0.01]: Minimum frequency at which a variant can be identified and reported.
 
 --n_cut n [Default 10]: Minimum number of sequences required to identify a variant in a specific alignment.
+
+--n_reps r [Default 1]: Minumum number of occasions on which a variant needs to be observed before it is reported.
+
+**Random:** Generates random sequences matching the properties of the alignment
+
+We generate variant frequencies, including single nucleotide polymorphisms, and deletions (insertions are presupposed to have been incorporated into the alignment), across the sequences in the alignment.  We then generate a correlation matrix, describing pairwise correlations between these variants.  Random sequences are then generated in a manner that reflects the variant frequencies and the correlations between them.
+
+_Output:_ Generated sequences are reported either as a series of single-nucleotide variant positions or as complete sequences.  
+
+_Options:_
+
+--generate <number> : Number of random sequences to generate.
+
+--output <type> [Default: Sparse] : Output format for random sequences:
+
+	Sparse: Outputs comprise nucleotide positions at which single nucleotide variants arise.  Deletions are not explicitly reported, though the locations of variants that fall in deletions are not reported.  This format was designed for sparse storage of potentially large numbers of sequences, generated from alignments of viral genomes, where indels are often rare.
+
+	FASTA: Outputs comprise sequences in FASTA format.  Deletions are explicitly included in sequences.  The locations of variants is not reported, but could be derived from a comparison of sequences if needed.
+	
 
 

@@ -138,7 +138,6 @@ int main(int argc, const char **argv){
         cout << " --output <type> : Output format for random files:\n";
         cout << "       Sparse: [Default] Output positions of variants w.r.t. consensus\n";
         cout << "       FASTA: Output as .fasta file format\n";
-        cout << "       Binary: Output as binary string at variant positions\n";
         cout << "\n";
         cout << "./run_align FilterSiteQ <flags> : Removes positions in the genome which don't contain {A, C, G, T} nucleotides for many of the sequences.\n";
         cout << "Flags are:\n";

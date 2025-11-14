@@ -43,6 +43,14 @@ Produces a series of alignment files, each containing sequences which correspond
 
 _Outputs:_ Where the input file is AlignmentName.xxx, sequences from each time T are output to AlignmentName_T.xxx
 
+**StringSplit:** Splits the alignment according to a provided list of sequence characteristics
+
+_Input:_ This routine requires a file Strings.in, which contains descriptions, such as host country names, one per line, for each sequence in the alignment.
+
+Produces a series of alignment files, each containing sequences which correspond to a particular descriptor.
+
+_Outputs:_ Where the input file is AlignmentName.xxx, sequences corresponding to the descriptor S are output to AlignmentName_S.xxx
+
 
 **TimedFreqs:** Calculates variant frequencies across time within an alignment.
 
@@ -63,4 +71,5 @@ _Options:_
 --q_cut q [Default 0.01]: Minimum frequency at which a variant can be identified and reported.
 
 --n_cut n [Default 10]: Minimum number of sequences required to identify a variant in a specific alignment.
+
 

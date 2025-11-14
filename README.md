@@ -43,12 +43,26 @@ Produces a series of alignment files, each containing sequences which correspond
 
 Outputs: Where the input file is AlignmentName.xxx, sequences from each time T are output to AlignmentName_T.xxx
 
+
 TimedFreqs: Calculates variant frequencies across time within an alignment.
 
-Inupt: Requires the file Times.in, described above.
+Input: Requires the file Times.in, described above.
 
-The alignment is split into sequences representing each of the times specified by the input file.  
+The alignment is split into sequences representing each of the times specified by the input file Times.in.  Variant positions are identified in the alignment as a whole.  Next, variant frequencies are calculated for each of the time-specific alignments.
 
+Variant frequency information is then output.  We identify variants that appear at a frequency of at least q_cut in a time-specific alignment containing at least n_cut sequences.  
+
+Output: Variant counts are then output to the file Variant_trajectories.out, which has the format:
+
+Position in genome	Consensus	Alternative	#Times	(Time	#A	#C	#G	#T	Total)
+
+for nucleotide sequences; for protein sequences the number of each amino acid is shown.
+
+Options:
+
+--q_cut q [Default 0.01]: Minimum frequency at which a variant can be identified and reported.
+
+--n_cut n [Default 10]: Minimum number of sequences required to identify a variant in a specific alignment.
 
 [Work on README in progress.]
 

@@ -121,8 +121,6 @@ int main(int argc, const char **argv){
     if (p.method.compare("TimedFreqs")==0) {
         //Updated
         if (p.type==1) {
-            cout << "The function TimedFreqs currently works only for nucleotide sequences\n";
-        } else {
             GetTDNucleotideCounts (p,consensus,alphabet,var_positions,ali_stats2,seqs);
         }
         return 0;
